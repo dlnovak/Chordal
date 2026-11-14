@@ -15,6 +15,10 @@ button,select,input,textarea{font:inherit}
 .bar{flex:none;display:flex;gap:6px;align-items:center;padding:6px 10px;background:var(--bar);overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
 .bar button,.bar select{background:var(--btn);color:#eee;border:0;border-radius:8px;padding:8px 12px;font-size:14px;cursor:pointer;flex:none}
 .bar button:hover{background:var(--btnh)}
+.cloudOnly{display:none!important}
+body.cloud .cloudOnly{display:inline-block!important}
+#bLive.on{background:#1f7a3a!important}
+.bar button:disabled{opacity:.35;cursor:default}
 .bar .sep{width:1px;height:24px;background:#333;flex:none;margin:0 4px}
 .bar .lbl{font-size:12px;color:#8a9099;flex:none;text-transform:uppercase;letter-spacing:.06em}
 #secbar{border-top:1px solid #23262c}
@@ -95,9 +99,10 @@ body.show .bar,body.show #panel{display:none!important}
   <button id="bNew">＋ New song</button>
   <button id="bText" title="Paste or edit the words">✎ Lyrics</button>
   <span class="sep"></span>
-  <button id="bDown" title="Transpose down">♭ −</button>
-  <span id="tLbl">0</span>
-  <button id="bUp" title="Transpose up">♯ +</button>
+  <span class="lbl">Transpose</span>
+  <button id="bDown" title="Transpose down a half step (max 8)">−</button>
+  <span id="tLbl" title="Tap to reset to the original key" style="cursor:pointer">0</span>
+  <button id="bUp" title="Transpose up a half step (max 8)">+</button>
   <button id="bCols" title="Columns">Cols: Auto</button>
   <button id="bTheme">☀ Light</button>
   <span class="sep"></span>
@@ -106,6 +111,9 @@ body.show .bar,body.show #panel{display:none!important}
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
   <button id="bShow" title="Hide all controls">▶ Show</button>
+  <span class="sep cloudOnly"></span>
+  <button id="bCloud" class="cloudOnly">☁ Sign in</button>
+  <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
 </div>
 <div class="bar" id="secbar">
   <span class="lbl">Add above selected line:</span>
@@ -283,7 +291,8 @@ function load() {
   if (!songs.length) songs = [demo()];
   if (cur >= songs.length) cur = 0;
 }
-function save() { try { localStorage.setItem(LS, JSON.stringify({ songs, cur, settings })); } catch (e) {} }
+const hooks = {};
+function save() { try { localStorage.setItem(LS, JSON.stringify({ songs, cur, settings })); } catch (e) {} if (hooks.saved) hooks.saved(); }
 function merge(list, overwrite) {
   let n = 0;
   for (const s of list || []) {
@@ -342,7 +351,8 @@ function render() {
   });
   close();
   $('#body').innerHTML = s.lines.length ? html : '<div id="empty">Tap <b>✎ Lyrics</b> to paste the words of this song.</div>';
-  $('#tLbl').textContent = (n > 0 ? '+' : '') + n;
+  $('#tLbl').textContent = n ? (n > 0 ? '+' : '') + n : '0';
+  $('#bUp').disabled = n >= 8; $('#bDown').disabled = n <= -8;
   $('#bCols').textContent = 'Cols: ' + (s.cols === 'auto' ? 'Auto' : s.cols);
   $('#songSel').value = s.id;
   document.body.classList.toggle('light', settings.theme === 'light');
@@ -373,7 +383,7 @@ function scale() {
 new ResizeObserver(scale).observe($('#viewport'));
 function fillSelect() { $('#songSel').innerHTML = songs.map((s, i) => `<option value="${esc(s.id)}">${i + 1}. ${esc(s.title || 'Untitled')}</option>`).join(''); }
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2200); }
-function go(i) { setSel(null); cur = (i + songs.length) % songs.length; save(); render(); }
+function go(i) { setSel(null); cur = (i + songs.length) % songs.length; save(); render(); if (hooks.went) hooks.went(song().id); }
 
 /* ================= selection + chord panel ================= */
 function cleanup() {   // drop empty chord slots the user abandoned
@@ -536,7 +546,13 @@ $('#bNext').onclick = () => go(cur + 1);
 $('#songSel').onchange = e => go(songs.findIndex(s => s.id === e.target.value));
 $('#bNew').onclick = () => openEditor(true);
 $('#bText').onclick = () => openEditor(false);
-const transpose = d => { const s = song(); s.transpose = (((s.transpose | 0) + d + 17) % 12) - 5; save(); render(); buildPanel(); };
+const transpose = d => {
+  const s = song(), v = (s.transpose | 0) + d;
+  if (v > 8 || v < -8) { toast('Transpose goes up to 8 steps each way'); return; }
+  s.transpose = v; save(); render(); buildPanel();
+  toast(v ? `Transposed ${v > 0 ? 'up' : 'down'} ${Math.abs(v)} step${Math.abs(v) > 1 ? 's' : ''} (half steps)` : 'Back to original key');
+};
+$('#tLbl').onclick = () => { const s = song(); if (s.transpose) transpose(-s.transpose); };
 $('#bUp').onclick = () => transpose(1);
 $('#bDown').onclick = () => transpose(-1);
 $('#bCols').onclick = () => { const o = ['auto', '1', '2', '3', '4'], s = song(); s.cols = o[(o.indexOf(s.cols) + 1) % o.length]; save(); render(); };
@@ -591,10 +607,142 @@ document.addEventListener('keydown', e => {
 });
 
 /* ================= start ================= */
+/* ---- API for the Firebase sync module ---- */
+window.StageApp = {
+  hooks, toast,
+  get songs() { return songs; },
+  currentId: () => song().id,
+  // replace the song list with the cloud copy; keeps local objects that are unchanged
+  setSongs(list) {
+    const curId = song() && song().id;
+    const byId = new Map(songs.map(s => [s.id, s]));
+    let touchedCurrent = false;
+    const next = list.map(s => {
+      const local = byId.get(s.id);
+      if (local && JSON.stringify(local) === JSON.stringify(s)) return local;
+      if (s.id === curId) touchedCurrent = true;
+      return norm(s);
+    });
+    if (touchedCurrent && sel) { sel = null; document.body.classList.remove('has-sel'); buildPanel(); }
+    songs = next.length ? next : [demo()];
+    const i = songs.findIndex(s => s.id === curId);
+    cur = i >= 0 ? i : Math.min(cur, songs.length - 1);
+    try { localStorage.setItem(LS, JSON.stringify({ songs, cur, settings })); } catch (e) {}
+    fillSelect(); render();
+  },
+  goId(id) { const i = songs.findIndex(s => s.id === id); if (i >= 0 && i !== cur) { setSel(null); cur = i; render(); } },
+};
 load(); fillSelect(); scale(); render();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fit(); });
 loadRepoSongs();
 })();
+</script>
+<script type="module">
+/* ================= FIREBASE SYNC =================
+   1. Paste your Firebase web config below (Firebase console → Project settings → Your apps → Web app).
+   2. Until you do, the app runs exactly as before (songs saved only on this device). */
+const firebaseConfig = {
+  apiKey: "AIzaSyDstRwxmh4lQfDmLLkDKfUjs7NU7jxjM_g",
+  authDomain: "chord-3e8f9.firebaseapp.com",
+  projectId: "chord-3e8f9",
+  storageBucket: "chord-3e8f9.firebasestorage.app",
+  messagingSenderId: "4495290533",
+  // appId: "PASTE_APP_ID_HERE",   // optional: copy the appId line from Firebase and remove the // at the start
+};
+/* ================================================= */
+
+const App = window.StageApp;
+if (firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith('PASTE')) start().catch(e => { console.error(e); App.toast('Cloud sync could not start: ' + e.message); });
+
+async function start() {
+  const V = 'https://www.gstatic.com/firebasejs/10.12.2/';
+  const { initializeApp } = await import(V + 'firebase-app.js');
+  const { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } = await import(V + 'firebase-auth.js');
+  const { initializeFirestore, persistentLocalCache, collection, doc, onSnapshot, setDoc, deleteDoc, serverTimestamp } = await import(V + 'firebase-firestore.js');
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = initializeFirestore(app, { localCache: persistentLocalCache() });   // works offline at the gig, syncs when back online
+  const $ = s => document.querySelector(s);
+  document.body.classList.add('cloud');
+
+  let user = null, canWrite = false, gotFirst = false;
+  const pushed = new Map();          // id -> last payload we know the cloud has
+  const dirty = new Set();           // ids with a write in flight
+  const KNOWN = 'stagecharts.knownCloudIds';
+  const known = new Set(JSON.parse(localStorage.getItem(KNOWN) || '[]'));
+  const saveKnown = () => localStorage.setItem(KNOWN, JSON.stringify([...known]));
+  const payloadOf = (s, i) => JSON.stringify(s) + '|' + i;
+
+  /* ---- sign in / out ---- */
+  $('#bCloud').onclick = async () => {
+    if (user) { if (confirm('Sign out? This device will go back to view-only.')) await signOut(auth); return; }
+    const p = new GoogleAuthProvider();
+    try { await signInWithPopup(auth, p); } catch (e) { if (/popup/.test(e.code || '')) await signInWithRedirect(auth, p); else App.toast('Sign-in failed: ' + (e.code || e.message)); }
+  };
+  onAuthStateChanged(auth, u => {
+    user = u; canWrite = !!u;
+    $('#bCloud').textContent = u ? '☁ ' + (u.displayName || u.email).split(' ')[0] + ' (synced)' : '☁ Sign in to edit';
+    $('#bLive').textContent = '📡 ' + (u ? 'Lead' : 'Follow') + ': ' + (live ? 'on' : 'off');
+    if (u && gotFirst) uploadLocalOnly();
+  });
+
+  /* ---- songs: cloud -> this device ---- */
+  onSnapshot(collection(db, 'songs'), snap => {
+    const remote = [];
+    snap.forEach(d => {
+      const x = d.data();
+      try { const s = JSON.parse(x.data); s.id = d.id; remote.push({ s, order: x.order ?? 999 }); known.add(d.id); } catch (e) {}
+    });
+    saveKnown();
+    remote.sort((a, b) => a.order - b.order);
+    const local = App.songs;
+    const localById = new Map(local.map(s => [s.id, s]));
+    const list = remote.map(r => (dirty.has(r.s.id) && localById.get(r.s.id)) || r.s);
+    remote.forEach((r, i) => { if (!dirty.has(r.s.id)) pushed.set(r.s.id, payloadOf(r.s, r.order)); });
+    // keep songs made on this device that have never been in the cloud
+    local.forEach((s, i) => { if (!known.has(s.id) && !list.some(x => x.id === s.id)) list.splice(Math.min(i, list.length), 0, s); });
+    App.setSongs(list);
+    if (!gotFirst) { gotFirst = true; if (canWrite) uploadLocalOnly(); }
+  }, e => App.toast('Cloud read error: ' + e.code));
+
+  /* ---- songs: this device -> cloud (only when signed in) ---- */
+  let timer = null;
+  App.hooks.saved = () => { if (canWrite && gotFirst) { clearTimeout(timer); timer = setTimeout(push, 700); } };
+  function uploadLocalOnly() { push(); }
+  async function push() {
+    if (!canWrite) return;
+    const songs = App.songs, ids = new Set(songs.map(s => s.id));
+    const jobs = [];
+    songs.forEach((s, i) => {
+      const p = payloadOf(s, i);
+      if (pushed.get(s.id) === p) return;
+      pushed.set(s.id, p); dirty.add(s.id); known.add(s.id);
+      jobs.push(setDoc(doc(db, 'songs', s.id), { data: JSON.stringify(s), order: i, title: s.title || '', updatedAt: serverTimestamp() })
+        .catch(e => { pushed.delete(s.id); App.toast(e.code === 'permission-denied' ? 'This Google account is not allowed to edit' : 'Save failed: ' + e.code); })
+        .finally(() => dirty.delete(s.id)));
+    });
+    for (const id of [...pushed.keys()]) if (!ids.has(id)) {
+      pushed.delete(id);
+      jobs.push(deleteDoc(doc(db, 'songs', id)).catch(e => App.toast('Delete failed: ' + e.code)));
+    }
+    saveKnown();
+    await Promise.all(jobs);
+  }
+
+  /* ---- follow the leader: one screen picks the song, the others jump to it ---- */
+  let live = localStorage.getItem('stagecharts.live') === '1';
+  const liveRef = doc(db, 'live', 'current');
+  const paintLive = () => { $('#bLive').classList.toggle('on', live); $('#bLive').textContent = '📡 ' + (user ? 'Lead' : 'Follow') + ': ' + (live ? 'on' : 'off'); };
+  paintLive();
+  $('#bLive').onclick = () => {
+    live = !live; localStorage.setItem('stagecharts.live', live ? '1' : '0'); paintLive();
+    if (live && user) setDoc(liveRef, { songId: App.currentId(), at: serverTimestamp() }).catch(() => {});
+    App.toast(live ? (user ? 'Leading: other screens with Follow on will jump to your song' : 'Following: this screen jumps to whatever song the leader picks') : 'Follow off');
+  };
+  App.hooks.went = id => { if (live && user) setDoc(liveRef, { songId: id, at: serverTimestamp() }).catch(() => {}); };
+  onSnapshot(liveRef, d => { if (live && !user && d.exists()) App.goId(d.data().songId); });
+}
 </script>
 </body>
 </html>
