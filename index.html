@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Stage Charts</title>
+<style>
+:root{--bg:#0b0c0f;--stage:#000;--lyric:#f4f4f4;--chord:#ffc53d;--head:#5cc8ff;--muted:#9aa0a8;--bar:#16181d;--btn:#262a31;--btnh:#333842;--rule:rgba(255,255,255,.14)}
+body.light{--stage:#fff;--lyric:#111;--chord:#c2410c;--head:#1d4ed8;--muted:#666;--rule:rgba(0,0,0,.14)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:#eee;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;overflow:hidden;-webkit-text-size-adjust:100%}
+body{display:flex;flex-direction:column;height:100vh;height:100dvh}
+button,select,input,textarea{font:inherit}
+.bar{flex:none;display:flex;gap:6px;align-items:center;padding:6px 10px;background:var(--bar);overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}
+.bar button,.bar select{background:var(--btn);color:#eee;border:0;border-radius:8px;padding:8px 12px;font-size:14px;cursor:pointer;flex:none}
+.bar button:hover{background:var(--btnh)}
+.bar .sep{width:1px;height:24px;background:#333;flex:none;margin:0 4px}
+.bar .lbl{font-size:12px;color:#8a9099;flex:none;text-transform:uppercase;letter-spacing:.06em}
+#secbar{border-top:1px solid #23262c}
+#secbar button{background:#1f2a38;color:#bfe3ff}
+#bShow{background:#2f6fed!important;color:#fff!important;font-weight:600}
+#songSel{max-width:240px}
+#tLbl{min-width:34px;text-align:center;font-size:14px;color:#ccc;flex:none}
+#viewport{flex:1;min-height:0;position:relative;overflow:hidden}
+#stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:center center;background:var(--stage);padding:34px 56px 40px;display:flex;flex-direction:column}
+#hdr{display:flex;align-items:baseline;gap:28px;border-bottom:2px solid var(--rule);padding-bottom:12px;margin-bottom:22px;flex:none}
+#title{font-size:58px;font-weight:800;color:var(--lyric);line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#artist{font-size:34px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+#key{font-size:36px;font-weight:700;color:var(--chord);white-space:nowrap}
+#body{flex:1;min-height:0;overflow:hidden;column-fill:auto;column-gap:1.6em;column-rule:2px solid var(--rule);color:var(--lyric)}
+.sec{break-inside:avoid;-webkit-column-break-inside:avoid;padding-bottom:.35em}
+.sh{color:var(--head);font-weight:800;font-size:.72em;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.1em;display:inline-block}
+.gap{height:.45em}
+.ln{display:flex;flex-wrap:wrap;align-items:flex-start;line-height:1.08;margin-bottom:.12em}
+.g{display:inline-flex;white-space:nowrap}
+.p{display:inline-flex;flex-direction:column;border-radius:.12em}
+.ch{color:var(--chord);font-weight:800;font-size:.86em;min-height:1.18em;white-space:pre;padding-right:.3em}
+.ch:empty{padding-right:0}
+.ly{white-space:pre}
+.noch .ch{display:none}
+.only .ly{display:none}
+.only .ch{padding-right:.9em}
+.empty{min-height:1.1em}
+.add{display:inline-flex;width:0;overflow:visible;align-self:flex-end}
+.add b{margin-left:.2em;font-size:.55em;font-weight:700;color:var(--head);opacity:.6;border:2px dashed currentColor;border-radius:.3em;padding:0 .3em;white-space:nowrap;cursor:pointer}
+#empty{color:var(--muted);font-size:44px;line-height:1.5}
+/* edit-mode affordances */
+body:not(.show) .p,body:not(.show) .sh,body:not(.show) .gap{cursor:pointer}
+body:not(.show) .p:hover{background:rgba(92,200,255,.16)}
+body:not(.show) .gap{outline:2px dashed rgba(128,128,128,.25);outline-offset:-2px}
+.sel{outline:4px solid #5cc8ff!important;outline-offset:2px;background:rgba(92,200,255,.18)}
+body.show .add,body.show .empty{display:none}
+body.show .gap{outline:none}
+/* chord panel */
+#panel{flex:none;display:none;background:#1b1e24;border-top:2px solid #2f6fed;padding:8px 10px 10px;max-height:46vh;overflow:auto}
+body.has-sel #panel{display:block}
+.prow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:5px 0}
+.prow .lbl{font-size:11px;color:#8a9099;text-transform:uppercase;letter-spacing:.06em;width:52px;flex:none}
+#panel button{background:#2b3038;color:#eee;border:0;border-radius:7px;padding:7px 11px;font-size:14px;cursor:pointer;min-width:38px}
+#panel button.chip{background:#3a3220;color:#ffd77a;font-weight:700}
+#panel button.q{background:#22303f;color:#bfe3ff}
+#panel button.pri{background:#2f6fed}
+#panel button.dng{background:#5a1f24}
+#panel input{background:#0f1115;border:1px solid #444;color:#ffd77a;font-weight:700;border-radius:7px;padding:7px 10px;width:120px;font-size:16px}
+#panel input.wide{width:220px;color:#eee}
+#panel .word{font-size:15px;color:#ddd}
+#panel .word b{color:#fff}
+/* show mode */
+body.show .bar,body.show #panel{display:none!important}
+#float{position:fixed;top:12px;right:12px;display:flex;gap:8px;z-index:9;opacity:0;pointer-events:none;transition:opacity .25s}
+#float.on{opacity:1;pointer-events:auto}
+#float button{background:rgba(40,44,52,.92);color:#fff;border:0;border-radius:10px;padding:10px 14px;font-size:15px;cursor:pointer}
+/* dialog */
+#ed{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;z-index:20;align-items:center;justify-content:center;padding:12px}
+#ed.open{display:flex}
+#edBox{background:#1b1e24;border-radius:14px;width:min(900px,100%);height:min(92vh,860px);display:flex;flex-direction:column;padding:14px;gap:10px}
+#edBox .row{display:flex;gap:8px;flex-wrap:wrap}
+#edBox input{flex:1;min-width:120px;background:#0f1115;border:1px solid #333;color:#eee;border-radius:8px;padding:9px 10px}
+#edBox input#fKey{flex:0 0 100px;min-width:0}
+#fText{flex:1;background:#0f1115;border:1px solid #333;color:#eee;border-radius:8px;padding:10px;font-family:ui-monospace,Menlo,Consolas,"Courier New",monospace;font-size:14px;line-height:1.4;resize:none;white-space:pre;overflow:auto}
+#edBox .help{font-size:12.5px;color:#9aa0a8;line-height:1.45}
+#edBox button{background:#2b3038;color:#eee;border:0;border-radius:8px;padding:9px 16px;cursor:pointer}
+#edBox button.pri{background:#2f6fed}
+#edBox button.dng{background:#5a1f24;margin-right:auto}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#2f6fed;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:30}
+#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="bar" id="bar">
+  <button id="bPrev" title="Previous song">◀</button>
+  <select id="songSel" title="Song"></select>
+  <button id="bNext" title="Next song">▶</button>
+  <button id="bNew">＋ New song</button>
+  <button id="bText" title="Paste or edit the words">✎ Lyrics</button>
+  <span class="sep"></span>
+  <button id="bDown" title="Transpose down">♭ −</button>
+  <span id="tLbl">0</span>
+  <button id="bUp" title="Transpose up">♯ +</button>
+  <button id="bCols" title="Columns">Cols: Auto</button>
+  <button id="bTheme">☀ Light</button>
+  <span class="sep"></span>
+  <button id="bExport" title="Download all songs as songs.json">⬇ Export</button>
+  <button id="bImport" title="Load songs.json">⬆ Import</button>
+  <input type="file" id="fileIn" accept=".json,application/json" hidden>
+  <span class="sep"></span>
+  <button id="bShow" title="Hide all controls">▶ Show</button>
+</div>
+<div class="bar" id="secbar">
+  <span class="lbl">Add above selected line:</span>
+  <button data-sec="Intro">Intro</button>
+  <button data-sec="Verse">Verse</button>
+  <button data-sec="Chorus">Chorus</button>
+  <button data-sec="Bridge">Bridge</button>
+  <button data-sec="Break">Break</button>
+  <button data-sec="Instrumental">Instrumental</button>
+  <button data-sec="Solo">Solo</button>
+  <button data-sec="Repeat Chorus">Repeat Chorus</button>
+  <button data-sec="Repeat x2">Repeat ×2</button>
+  <button data-sec="Tag">Tag</button>
+  <button data-sec="Outro">Outro</button>
+  <button data-sec="?">Custom…</button>
+  <span class="sep"></span>
+  <button data-ins="chords">Chord-only line</button>
+  <button data-ins="gap">Space</button>
+</div>
+
+<div id="viewport">
+  <div id="stage">
+    <div id="hdr"><div id="title"></div><div id="artist"></div><div id="key"></div></div>
+    <div id="body"></div>
+  </div>
+</div>
+
+<div id="panel"></div>
+
+<div id="float"><button id="fPrev">◀</button><button id="fNext">▶</button><button id="fEdit">✎ Edit</button></div>
+
+<div id="ed">
+  <div id="edBox">
+    <div class="row">
+      <input id="fTitle" placeholder="Song title">
+      <input id="fArtist" placeholder="Artist (optional)">
+      <input id="fKey" placeholder="Key (e.g. C)">
+    </div>
+    <textarea id="fText" spellcheck="false" placeholder="Paste the lyrics here, one line per line.&#10;&#10;Leave a blank line between verses.&#10;&#10;Then tap Done and click any word to put a chord over it."></textarea>
+    <div class="help">
+      Just paste the words. After you tap <b>Done</b>, click a word on the chart to put a chord on it, and use the blue buttons to add Chorus, Break, Repeat and so on.<br>
+      Already have chords? Pasting a chords-over-lyrics sheet works too, and so does <code>[C]inline</code> style. A line like <code>[Chorus]</code> becomes a section label.
+    </div>
+    <div class="row">
+      <button class="dng" id="eDel">Delete song</button>
+      <button id="eCancel">Cancel</button>
+      <button class="pri" id="eSave">Done</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const LS = 'stagecharts.v2';
+const DEMO_TEXT = "[Intro]\n[G] [C] [G] [D]\n\n[Verse 1]\nA[G]mazing [G7]grace, how [C]sweet the [G]sound\nThat [G]saved a wretch like [D]me\nI [G]once was [G7]lost, but [C]now am [G]found\nWas [Em]blind, but [D]now I [G]see\n\n[Verse 2]\n'Twas [G]grace that [G7]taught my [C]heart to [G]fear\nAnd [G]grace my fears re[D]lieved\nHow [G]precious [G7]did that [C]grace ap[G]pear\nThe [Em]hour I [D]first be[G]lieved\n\n[Verse 3]\nThrough [G]many [G7]dangers, [C]toils and [G]snares\nI [G]have already [D]come\n'Tis [G]grace hath [G7]brought me [C]safe thus [G]far\nAnd [Em]grace will [D]lead me [G]home\n\n[Verse 4]\nWhen [G]we've been [G7]there ten [C]thousand [G]years\nBright [G]shining as the [D]sun\nWe've [G]no less [G7]days to [C]sing God's [G]praise\nThan [Em]when we'd [D]first be[G]gun\n\n[Tag]\nThan [Em]when we'd [D]first be[G]gun\n[C] [G]";
+
+/* ================= chords ================= */
+const CHORD = /^\(?[A-G](?:#|b|♯|♭)?(?:maj|min|mi|m|M|dim|aug|sus|add|o|°|ø|\+|-)?\d{0,2}(?:(?:maj|sus|add|no|b|#|\+|-)?\d{1,2})*(?:\/[A-G](?:#|b|♯|♭)?)?\)?\*?$/;
+const BAR = /^(?:\|+|:?\|\|?:?|%|\/|-+|x\d+|\d+x|\(x?\d+x?\)|n\.?c\.?)$/i;
+const isChord = t => CHORD.test(t);
+function isChordLine(line) {
+  const toks = line.trim().split(/\s+/).filter(Boolean);
+  if (!toks.length) return false;
+  let n = 0;
+  for (const t of toks) { if (isChord(t)) n++; else if (!BAR.test(t)) return false; }
+  return n > 0;
+}
+const SH = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const FL = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const IDX = {C:0,'B#':0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,Fb:4,F:5,'E#':5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11,Cb:11};
+const tNote = (note, n, flat) => { const i = IDX[note.replace('♯','#').replace('♭','b')]; return i == null ? note : (flat ? FL : SH)[((i + n) % 12 + 12) % 12]; };
+function tChord(ch, n, flat) {
+  if (!n || !ch || !isChord(ch)) return ch;
+  return ch.replace(/^(\(?)([A-G][#b♯♭]?)/, (m, p, r) => p + tNote(r, n, flat)).replace(/\/([A-G][#b♯♭]?)/, (m, r) => '/' + tNote(r, n, flat));
+}
+function preferFlat(k, n) {
+  const m = (k || '').match(/^([A-G][#b♯♭]?)(m(?!aj))?/);
+  if (!m) return false;
+  const i = IDX[tNote(m[1], n, false)];
+  return m[2] ? [0,2,5,7,10,3].includes(i) : [5,10,3,8,1].includes(i);
+}
+
+/* ================= text -> song lines =================
+   line kinds: {k:'label',t} | {k:'gap'} | {k:'line',toks:[{t,c,g}]}
+   a tok is one word (t) with an optional chord (c) over it; g=1 glues it to the previous word (chord mid-word);
+   t='' is a chord with no word under it */
+const SEC = /^(intro|verse|chorus|pre-?chorus|bridge|outro|tag|instrumental|refrain|solo|interlude|coda|ending|break|turnaround|repeat|vamp)(\s+(\d+|x\s?\d+|\d+\s?x|×\s?\d+|chorus|verse|bridge|intro|solo|twice|\(.*\)))*\s*:?$/i;
+function headerOf(raw) {
+  const t = raw.trim();
+  if (!t) return null;
+  let m = t.match(/^\{(?:c|comment|ci|cb)\s*:\s*(.*)\}$/i); if (m) return m[1].trim();
+  m = t.match(/^\[([^\]]+)\]\s*:?$/); if (m && !isChord(m[1].trim())) return m[1].trim();
+  m = t.match(/^(.{1,30}?)\s*[-=_~*]{3,}\s*$/); if (m && !isChordLine(m[1])) return m[1].replace(/:$/, '').trim();
+  if (isChordLine(t)) return null;
+  if (SEC.test(t)) return t.replace(/:$/, '').trim();
+  if (/^\S+(\s\S+){0,2}:$/.test(t) && !/[,.;!?]/.test(t)) return t.slice(0, -1).trim();
+  return null;
+}
+const hasInline = l => [...l.matchAll(/\[([^\]]+)\]/g)].some(m => isChord(m[1].trim()));
+function inlineSegs(line) {
+  const parts = line.split(/\[([^\]]+)\]/), segs = [];
+  if (parts[0]) segs.push({ c: '', t: parts[0] });
+  for (let i = 1; i < parts.length; i += 2) segs.push({ c: parts[i].trim(), t: parts[i + 1] || '' });
+  return segs;
+}
+const chordPos = line => [...line.matchAll(/\S+/g)].map(m => ({ col: m.index, c: m[0] }));
+const lead = s => s.match(/^ */)[0].length;
+function mergeLines(chLine, lyLine) {
+  const ind = Math.min(lead(chLine), lead(lyLine));
+  chLine = chLine.slice(ind); lyLine = lyLine.trimEnd().slice(ind);
+  const pos = chordPos(chLine), segs = [];
+  if (pos[0].col > 0) segs.push({ c: '', t: lyLine.slice(0, pos[0].col) });
+  pos.forEach((p, k) => {
+    const end = k + 1 < pos.length ? pos[k + 1].col : Infinity;
+    segs.push({ c: p.c, t: p.col < lyLine.length ? lyLine.slice(p.col, end) : ' ' });
+  });
+  return segs;
+}
+function segsToToks(segs) {
+  const toks = []; let prevSp = true;
+  for (const s of segs) {
+    const t = s.t || '', words = t.split(/\s+/).filter(Boolean), leadSp = /^\s/.test(t);
+    if (!words.length) { if (s.c) toks.push({ c: s.c, t: '' }); prevSp = true; continue; }
+    words.forEach((w, i) => {
+      const last = toks[toks.length - 1];
+      toks.push({ c: i === 0 ? (s.c || '') : '', t: w, g: (i === 0 && !leadSp && !prevSp && last && last.t) ? 1 : 0 });
+    });
+    prevSp = /\s$/.test(t);
+  }
+  return toks;
+}
+function textToLines(text) {
+  const out = [];
+  const src = (text || '').replace(/\r/g, '').replace(/\t/g, '    ').split('\n');
+  const pushGap = () => { if (out.length && out[out.length - 1].k !== 'gap') out.push({ k: 'gap' }); };
+  for (let i = 0; i < src.length; i++) {
+    const raw = src[i], t = raw.trim();
+    if (!t || /^[-=_~*]{3,}$/.test(t)) { pushGap(); continue; }
+    if (/^\{.*\}$/.test(t) && !/^\{(c|comment|ci|cb)\s*:/i.test(t)) continue;
+    const h = headerOf(raw);
+    if (h !== null) { out.push({ k: 'label', t: h }); continue; }
+    if (isChordLine(raw)) {
+      const nx = src[i + 1];
+      if (nx !== undefined && nx.trim() && !isChordLine(nx) && headerOf(nx) === null && !hasInline(nx)) { out.push({ k: 'line', toks: segsToToks(mergeLines(raw, nx)) }); i++; }
+      else out.push({ k: 'line', toks: chordPos(raw.trim()).map(p => ({ c: p.c, t: '' })) });
+      continue;
+    }
+    if (hasInline(raw)) { out.push({ k: 'line', toks: segsToToks(inlineSegs(t)) }); continue; }
+    out.push({ k: 'line', toks: segsToToks([{ c: '', t }]) });
+  }
+  while (out.length && out[out.length - 1].k === 'gap') out.pop();
+  return out;
+}
+function linesToText(lines) {
+  return lines.map(L => {
+    if (L.k === 'gap') return '';
+    if (L.k === 'label') return '[' + L.t + ']';
+    return L.toks.map((k, i) => (i > 0 && !k.g ? ' ' : '') + (k.c ? '[' + k.c + ']' : '') + k.t).join('');
+  }).join('\n');
+}
+
+/* ================= state ================= */
+let songs = [], cur = 0, settings = { theme: 'dark' }, sel = null;   // sel = {l, i?}
+const uid = () => Math.random().toString(36).slice(2, 10);
+const song = () => songs[cur];
+const demo = () => ({ id: 'demo-amazing-grace', title: 'Amazing Grace', artist: 'Traditional (example)', key: 'G', lines: textToLines(DEMO_TEXT), transpose: 0, cols: 'auto' });
+function norm(s) {
+  return { id: s.id || uid(), title: s.title || '', artist: s.artist || '', key: s.key || '',
+    lines: Array.isArray(s.lines) ? s.lines : textToLines(s.text || ''), transpose: s.transpose | 0, cols: s.cols || 'auto' };
+}
+function load() {
+  try { const d = JSON.parse(localStorage.getItem(LS)); if (d && Array.isArray(d.songs)) { songs = d.songs.map(norm); cur = d.cur | 0; Object.assign(settings, d.settings || {}); } } catch (e) {}
+  if (!songs.length) songs = [demo()];
+  if (cur >= songs.length) cur = 0;
+}
+function save() { try { localStorage.setItem(LS, JSON.stringify({ songs, cur, settings })); } catch (e) {} }
+function merge(list, overwrite) {
+  let n = 0;
+  for (const s of list || []) {
+    if (!s || !(Array.isArray(s.lines) || typeof s.text === 'string')) continue;
+    const x = norm(s), i = songs.findIndex(y => y.id === x.id);
+    if (i < 0) { songs.push(x); n++; } else if (overwrite) { songs[i] = x; n++; }
+  }
+  if (n) { save(); fillSelect(); render(); }
+  return n;
+}
+async function loadRepoSongs() {
+  try { const r = await fetch('songs.json', { cache: 'no-store' }); if (!r.ok) return; const d = await r.json(); merge(Array.isArray(d) ? d : d.songs, false); } catch (e) {}
+}
+
+/* transpose helpers: chords are stored as typed; shown shifted by song.transpose */
+function songKeyGuess(s) {
+  if (s.key) return s.key;
+  for (const L of s.lines) if (L.k === 'line') for (const k of L.toks) if (k.c && isChord(k.c)) return k.c.replace(/^([A-G][#b]?m?(?!aj)).*$/, '$1');
+  return 'C';
+}
+const flatNow = s => preferFlat(songKeyGuess(s), s.transpose | 0);
+const disp = (s, c) => tChord(c, s.transpose | 0, flatNow(s));
+const store = (s, c) => tChord(c, -(s.transpose | 0), preferFlat(songKeyGuess(s), 0));
+
+/* ================= render ================= */
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+function lineHTML(L, l, s) {
+  const toks = L.toks;
+  const hasC = toks.some(k => k.c), hasT = toks.some(k => k.t);
+  let html = '', open = false;
+  toks.forEach((k, i) => {
+    if (!k.g || !open) { if (open) html += '</span>'; html += '<span class="g">'; open = true; }
+    const nx = toks[i + 1];
+    const ly = (k.t || ' ') + (k.t && nx && !nx.g ? ' ' : '');
+    const isSel = sel && sel.l === l && sel.i === i;
+    html += `<span class="p${isSel ? ' sel' : ''}" data-l="${l}" data-i="${i}"><span class="ch">${esc(disp(s, k.c || ''))}</span><span class="ly">${esc(ly)}</span></span>`;
+  });
+  if (open) html += '</span>';
+  html += `<span class="add" data-l="${l}"><b data-add="${l}">＋</b></span>`;
+  const cls = 'ln' + (hasC ? '' : ' noch') + (hasT ? '' : ' only') + (toks.length ? '' : ' empty');
+  return `<div class="${cls}">${html}</div>`;
+}
+function render() {
+  const s = song();
+  const n = s.transpose | 0, key = s.key;
+  $('#title').textContent = s.title || 'Untitled';
+  $('#artist').textContent = s.artist || '';
+  $('#key').textContent = key ? 'Key: ' + disp(s, key) + (n ? `  (orig ${key})` : '') : (n ? `Transposed ${n > 0 ? '+' : ''}${n}` : '');
+  let html = '', open = false;
+  const close = () => { if (open) { html += '</div>'; open = false; } };
+  s.lines.forEach((L, l) => {
+    if (L.k === 'gap') { close(); html += `<div class="gap${sel && sel.l === l ? ' sel' : ''}" data-l="${l}"></div>`; return; }
+    if (L.k === 'label') { close(); html += '<div class="sec">'; open = true; html += `<div class="sh${sel && sel.l === l ? ' sel' : ''}" data-l="${l}">${esc(L.t)}</div>`; return; }
+    if (!open) { html += '<div class="sec">'; open = true; }
+    html += lineHTML(L, l, s);
+  });
+  close();
+  $('#body').innerHTML = s.lines.length ? html : '<div id="empty">Tap <b>✎ Lyrics</b> to paste the words of this song.</div>';
+  $('#tLbl').textContent = (n > 0 ? '+' : '') + n;
+  $('#bCols').textContent = 'Cols: ' + (s.cols === 'auto' ? 'Auto' : s.cols);
+  $('#songSel').value = s.id;
+  document.body.classList.toggle('light', settings.theme === 'light');
+  $('#bTheme').textContent = settings.theme === 'light' ? '☾ Dark' : '☀ Light';
+  fit();
+}
+const fits = b => b.scrollWidth <= b.clientWidth + 2 && b.scrollHeight <= b.clientHeight + 2;
+function fit() {
+  const b = $('#body'), pref = song().cols || 'auto';
+  const opts = pref === 'auto' ? [1, 2, 3, 4] : [+pref];
+  let best = null;
+  for (const c of opts) {
+    b.style.columnCount = c;
+    let lo = 12, hi = 110;
+    b.style.fontSize = hi + 'px';
+    if (fits(b)) lo = hi;
+    else for (let k = 0; k < 10; k++) { const m = (lo + hi) / 2; b.style.fontSize = m + 'px'; if (fits(b)) lo = m; else hi = m; }
+    if (!best || lo > best.size * 1.08) best = { size: lo, cols: c };
+  }
+  b.style.columnCount = best.cols;
+  b.style.fontSize = best.size + 'px';
+}
+function scale() {
+  const vp = $('#viewport');
+  const k = Math.min(vp.clientWidth / 1920, vp.clientHeight / 1080);
+  $('#stage').style.transform = `translate(-50%,-50%) scale(${k})`;
+}
+new ResizeObserver(scale).observe($('#viewport'));
+function fillSelect() { $('#songSel').innerHTML = songs.map((s, i) => `<option value="${esc(s.id)}">${i + 1}. ${esc(s.title || 'Untitled')}</option>`).join(''); }
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2200); }
+function go(i) { setSel(null); cur = (i + songs.length) % songs.length; save(); render(); }
+
+/* ================= selection + chord panel ================= */
+function cleanup() {   // drop empty chord slots the user abandoned
+  const s = song();
+  s.lines.forEach(L => { if (L.k === 'line') L.toks = L.toks.filter(k => k.t || k.c); });
+}
+function setSel(x) {
+  if (!x) cleanup();
+  sel = x;
+  document.body.classList.toggle('has-sel', !!sel);
+  render(); buildPanel();
+}
+function allToks() { const a = []; song().lines.forEach((L, l) => { if (L.k === 'line') L.toks.forEach((k, i) => a.push({ l, i })); }); return a; }
+function step(d) {
+  const a = allToks(); if (!a.length) return;
+  let j = a.findIndex(p => sel && p.l === sel.l && p.i === sel.i);
+  j = j < 0 ? 0 : Math.min(a.length - 1, Math.max(0, j + d));
+  const target = song().lines[a[j].l].toks[a[j].i];
+  cleanup();
+  song().lines.forEach((L, l) => { if (L.k === 'line') { const i = L.toks.indexOf(target); if (i >= 0) sel = { l, i }; } });
+  render(); buildPanel(true);
+}
+const KEYCHORDS = k => {
+  const m = (k || 'C').match(/^([A-G][#b]?)(m(?!aj))?/) || [, 'C'];
+  const r = m[1], fl = preferFlat(k, 0), N = d => tNote(r, d, fl);
+  return m[2] ? [N(0) + 'm', N(5) + 'm', N(7) + 'm', N(7), N(7) + '7', N(3), N(8), N(10)]
+              : [N(0), N(0) + '7', N(5), N(7), N(7) + '7', N(9) + 'm', N(2) + 'm', N(4) + 'm', N(2)];
+};
+const ROOTS = ['C','C#','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+const QUALS = [['', 'maj'], ['m', 'm'], ['7', '7'], ['m7', 'm7'], ['maj7', 'maj7'], ['sus4', 'sus4'], ['sus2', 'sus2'], ['6', '6'], ['9', '9'], ['dim', 'dim'], ['aug', 'aug']];
+function curTok() { const L = song().lines[sel.l]; return L && L.k === 'line' ? L.toks[sel.i] : null; }
+function setChord(v) {
+  const k = curTok(); if (!k) return;
+  k.c = store(song(), v.trim());
+  save(); render();
+  const inp = $('#cIn'); if (inp && inp.value !== v) inp.value = v;
+}
+function buildPanel(focus) {
+  const P = $('#panel'), s = song();
+  if (!sel) { P.innerHTML = ''; return; }
+  const L = s.lines[sel.l];
+  if (!L) { P.innerHTML = ''; return; }
+  if (L.k === 'label') {
+    P.innerHTML = `<div class="prow"><span class="lbl">Label</span><input id="lIn" class="wide" value="${esc(L.t)}">
+      <button data-act="dellabel" class="dng">Delete label</button><button data-act="done" class="pri">Done</button></div>
+      <div class="prow"><span class="lbl">Quick</span>${['Intro','Verse 1','Verse 2','Verse 3','Chorus','Bridge','Break','Instrumental','Solo','Repeat Chorus','Repeat x2','Tag','Outro'].map(t => `<button class="q" data-lab="${t}">${t}</button>`).join('')}</div>`;
+    $('#lIn').oninput = e => { L.t = e.target.value; save(); render(); };
+    return;
+  }
+  if (L.k === 'gap') {
+    P.innerHTML = `<div class="prow"><span class="word">Space between blocks</span><button data-act="delline" class="dng">Remove space</button><button data-act="done" class="pri">Done</button></div>`;
+    return;
+  }
+  const k = curTok(); if (!k) { P.innerHTML = ''; return; }
+  const used = [...new Set(s.lines.flatMap(x => x.k === 'line' ? x.toks.map(t => disp(s, t.c)).filter(Boolean) : []))];
+  const keyNow = disp(s, songKeyGuess(s));
+  P.innerHTML = `
+  <div class="prow"><span class="word">${k.t ? `Chord over <b>“${esc(k.t)}”</b>` : 'Chord with no word under it'}</span>
+    <input id="cIn" value="${esc(disp(s, k.c || ''))}" placeholder="type: Am7" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <button data-act="clear">Remove</button>
+    <button data-act="prev">◀ Prev</button><button data-act="next" class="pri">Next word ▶</button><button data-act="done">Done</button></div>
+  <div class="prow"><span class="lbl">Key ${esc(keyNow)}</span>${KEYCHORDS(keyNow).map(c => `<button class="chip" data-ch="${c}">${c}</button>`).join('')}</div>
+  ${used.length ? `<div class="prow"><span class="lbl">Used</span>${used.map(c => `<button class="chip" data-ch="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}
+  <div class="prow"><span class="lbl">Root</span>${ROOTS.map(r => `<button data-root="${r}">${r}</button>`).join('')}</div>
+  <div class="prow"><span class="lbl">Type</span>${QUALS.map(q => `<button class="q" data-q="${q[0]}">${q[1]}</button>`).join('')}
+    <span style="flex:1"></span><button data-act="delline" class="dng">Delete this whole line</button></div>`;
+  const inp = $('#cIn');
+  inp.oninput = e => setChord(e.target.value);
+  inp.onkeydown = e => {
+    if (e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) { e.preventDefault(); step(1); }
+    else if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); step(-1); }
+    else if (e.key === 'Escape') setSel(null);
+  };
+  if (focus && matchMedia('(pointer:fine)').matches) { inp.focus(); inp.select(); }
+}
+$('#panel').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const s = song();
+  if (b.dataset.ch) { setChord(b.dataset.ch); return; }
+  if (b.dataset.root) { setChord(b.dataset.root); return; }
+  if (b.dataset.q !== undefined) {
+    const v = ($('#cIn').value || '').match(/^([A-G][#b]?)(.*?)(\/[A-G][#b]?)?$/);
+    if (v) setChord(v[1] + b.dataset.q + (v[3] || ''));
+    return;
+  }
+  if (b.dataset.lab) { s.lines[sel.l].t = b.dataset.lab; $('#lIn').value = b.dataset.lab; save(); render(); return; }
+  const a = b.dataset.act;
+  if (a === 'clear') setChord('');
+  else if (a === 'next') step(1);
+  else if (a === 'prev') step(-1);
+  else if (a === 'done') setSel(null);
+  else if (a === 'dellabel' || a === 'delline') { s.lines.splice(sel.l, 1); save(); setSel(null); }
+});
+$('#body').addEventListener('click', e => {
+  if (document.body.classList.contains('show')) return;
+  const add = e.target.closest('[data-add]');
+  if (add) {
+    const l = +add.dataset.add; cleanup();
+    const L = song().lines[l]; L.toks.push({ c: '', t: '' });
+    sel = { l, i: L.toks.length - 1 }; document.body.classList.add('has-sel'); render(); buildPanel(true); return;
+  }
+  const p = e.target.closest('.p');
+  if (p) { cleanup(); sel = { l: +p.dataset.l, i: +p.dataset.i }; document.body.classList.add('has-sel'); render(); buildPanel(true); return; }
+  const h = e.target.closest('.sh,.gap');
+  if (h) { setSel({ l: +h.dataset.l }); buildPanel(true); return; }
+  if (sel) setSel(null);
+});
+
+/* ================= section buttons ================= */
+$('#secbar').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const s = song();
+  cleanup();
+  let at = sel ? sel.l : s.lines.length;
+  if (b.dataset.sec) {
+    let t = b.dataset.sec;
+    if (t === '?') { t = prompt('Label text (e.g. "Key change", "Half time", "Stop")'); if (!t) return; }
+    if (t === 'Verse') t = 'Verse ' + (s.lines.slice(0, at).filter(L => L.k === 'label' && /^verse\b/i.test(L.t)).length + 1);
+    s.lines.splice(at, 0, { k: 'label', t });
+    save(); setSel({ l: at });
+  } else if (b.dataset.ins === 'gap') {
+    s.lines.splice(at, 0, { k: 'gap' }); save(); setSel(null);
+  } else if (b.dataset.ins === 'chords') {
+    s.lines.splice(at, 0, { k: 'line', toks: [{ c: '', t: '' }] });
+    save(); sel = { l: at, i: 0 }; document.body.classList.add('has-sel'); render(); buildPanel(true);
+  }
+});
+
+/* ================= lyrics dialog ================= */
+let editingNew = false;
+function openEditor(isNew) {
+  setSel(null);
+  editingNew = isNew;
+  const s = isNew ? norm({}) : song();
+  $('#fTitle').value = s.title; $('#fArtist').value = s.artist; $('#fKey').value = s.key; $('#fText').value = linesToText(s.lines);
+  $('#eDel').style.visibility = isNew ? 'hidden' : 'visible';
+  $('#ed').classList.add('open');
+  setTimeout(() => (isNew ? $('#fTitle') : $('#fText')).focus(), 30);
+}
+const closeEditor = () => $('#ed').classList.remove('open');
+$('#eSave').onclick = () => {
+  const data = { title: $('#fTitle').value.trim(), artist: $('#fArtist').value.trim(), key: $('#fKey').value.trim(), lines: textToLines($('#fText').value) };
+  if (editingNew) { songs.splice(cur + 1, 0, norm(data)); cur = songs.length > 1 ? cur + 1 : 0; }
+  else Object.assign(song(), data);
+  save(); fillSelect(); closeEditor(); render();
+  if (editingNew) toast('Now click any word to give it a chord');
+};
+$('#eCancel').onclick = closeEditor;
+$('#eDel').onclick = () => {
+  if (!confirm(`Delete "${song().title || 'Untitled'}"?`)) return;
+  songs.splice(cur, 1);
+  if (!songs.length) songs = [demo()];
+  cur = Math.min(cur, songs.length - 1);
+  save(); fillSelect(); closeEditor(); render();
+};
+
+/* ================= toolbar ================= */
+$('#bPrev').onclick = () => go(cur - 1);
+$('#bNext').onclick = () => go(cur + 1);
+$('#songSel').onchange = e => go(songs.findIndex(s => s.id === e.target.value));
+$('#bNew').onclick = () => openEditor(true);
+$('#bText').onclick = () => openEditor(false);
+const transpose = d => { const s = song(); s.transpose = (((s.transpose | 0) + d + 17) % 12) - 5; save(); render(); buildPanel(); };
+$('#bUp').onclick = () => transpose(1);
+$('#bDown').onclick = () => transpose(-1);
+$('#bCols').onclick = () => { const o = ['auto', '1', '2', '3', '4'], s = song(); s.cols = o[(o.indexOf(s.cols) + 1) % o.length]; save(); render(); };
+$('#bTheme').onclick = () => { settings.theme = settings.theme === 'light' ? 'dark' : 'light'; save(); render(); };
+$('#bExport').onclick = () => {
+  cleanup();
+  const blob = new Blob([JSON.stringify({ songs }, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'songs.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$('#bImport').onclick = () => $('#fileIn').click();
+$('#fileIn').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { const d = JSON.parse(await f.text()); toast(merge(Array.isArray(d) ? d : d.songs, true) + ' song(s) imported'); }
+  catch (err) { toast('That file could not be read'); }
+  e.target.value = '';
+};
+
+/* ================= show mode ================= */
+function setShow(on) {
+  setSel(null);
+  document.body.classList.toggle('show', on);
+  const d = document, el = d.documentElement;
+  try {
+    if (on && !d.fullscreenElement && (el.requestFullscreen || el.webkitRequestFullscreen)) (el.requestFullscreen || el.webkitRequestFullscreen).call(el).catch?.(() => {});
+    if (!on && (d.fullscreenElement || d.webkitFullscreenElement)) (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+  } catch (e) {}
+  flashFloat(on);
+}
+function flashFloat(on) {
+  const f = $('#float'); clearTimeout(flashFloat.h);
+  f.classList.toggle('on', !!on);
+  if (on) flashFloat.h = setTimeout(() => f.classList.remove('on'), 2500);
+}
+$('#bShow').onclick = () => setShow(true);
+$('#fEdit').onclick = () => setShow(false);
+$('#fPrev').onclick = () => { go(cur - 1); flashFloat(true); };
+$('#fNext').onclick = () => { go(cur + 1); flashFloat(true); };
+$('#viewport').addEventListener('click', () => { if (document.body.classList.contains('show')) flashFloat(true); });
+document.addEventListener('mousemove', () => { if (document.body.classList.contains('show')) flashFloat(true); });
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('show')) setShow(false); });
+
+document.addEventListener('keydown', e => {
+  if ($('#ed').classList.contains('open')) { if (e.key === 'Escape') closeEditor(); return; }
+  if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  const show = document.body.classList.contains('show');
+  if (e.key === 'Escape') { if (show) setShow(false); else if (sel) setSel(null); return; }
+  if (sel && !show) { if (e.key === 'ArrowRight') { e.preventDefault(); step(1); } else if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); } return; }
+  if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(cur + 1); }
+  else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+  else if (e.key === 's' || e.key === 'S') setShow(!show);
+});
+
+/* ================= start ================= */
+load(); fillSelect(); scale(); render();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fit(); });
+loadRepoSongs();
+})();
+</script>
+</body>
+</html>
