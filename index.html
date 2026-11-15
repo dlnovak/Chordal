@@ -22,6 +22,7 @@ body.cloud .cloudOnly{display:inline-block!important}
 .bar .sep{width:1px;height:24px;background:#333;flex:none;margin:0 4px}
 .bar .lbl{font-size:12px;color:#8a9099;flex:none;text-transform:uppercase;letter-spacing:.06em}
 #secbar{border-top:1px solid #23262c}
+@media (min-width:700px){.bar{flex-wrap:wrap;overflow-x:visible}}
 #secbar button{background:#1f2a38;color:#bfe3ff}
 #secbar #bWhere{background:#3a3220;color:#ffd77a;font-weight:600}
 #bShow{background:#2f6fed!important;color:#fff!important;font-weight:600}
@@ -114,6 +115,7 @@ body.show .ch{cursor:pointer}
   <button id="bPrev" title="Previous song">◀</button>
   <select id="songSel" title="Song"></select>
   <button id="bNext" title="Next song">▶</button>
+  <button id="bShow" title="Full screen: hide all controls (S)">⛶ Show</button>
   <button id="bNew">＋ New song</button>
   <button id="bText" title="Paste or edit the words">✎ Lyrics</button>
   <button id="bUndo" title="Undo (Ctrl+Z)">↶ Undo</button>
@@ -132,8 +134,7 @@ body.show .ch{cursor:pointer}
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <button id="bShow" title="Hide all controls">▶ Show</button>
-  <span class="lbl" title="App version">v9</span>
+  <span class="lbl" title="App version">v10</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
