@@ -129,12 +129,47 @@ body.playing #playbar{display:block}
 #pctl .psep{width:1px;height:22px;background:#333;margin:0 4px}
 #pTempo{width:62px;background:#0f1115;border:1px solid #444;color:#eee;border-radius:7px;padding:6px;font-size:15px;text-align:center}
 #pVol{width:90px}
+#pCvol{width:70px}
+#pMet.sel{background:#1f7a3a!important}
+#pBeats{background:#2b3038;color:#eee;border:0;border-radius:7px;padding:7px 6px;font-size:14px}
+#pDots{display:inline-flex;gap:4px;align-items:center}
+#pDots i{width:10px;height:10px;border-radius:50%;background:#333a44;display:inline-block}
+#pDots i.a{background:#ffc53d}
+#pDots i.b{background:#5cc8ff}
 #pDur{width:110px}
 #pDurLbl{font-size:13px;color:#ccc;min-width:34px}
 .pad .ring{position:absolute;left:0;bottom:0;height:4px;background:#1f7a3a;width:0;border-radius:0 0 8px 8px}
 #phint{font-size:12px;color:#7d848e;padding:2px 2px 0}
 #phint b{color:#bbb}
 body.show #phint{display:none}
+#lib{position:fixed;inset:0;background:#0f1115;z-index:16;display:none;flex-direction:column;color:#eee}
+#lib.open{display:flex}
+#libHead{display:flex;align-items:center;padding:10px 12px;background:#16181d}
+#libHead b{font-size:17px;margin-right:auto}
+#lib button{background:#2b3038;color:#eee;border:0;border-radius:8px;padding:7px 12px;font-size:14px;cursor:pointer}
+#lib button.pri{background:#2f6fed}
+#lib button.dng{background:#5a1f24}
+#lib button.sm{padding:5px 9px;font-size:13px}
+#libBody{flex:1;display:flex;min-height:0}
+#libLists{width:260px;flex:none;border-right:1px solid #23262c;overflow:auto;padding:10px}
+#libMain{flex:1;overflow:auto;padding:10px 14px 30px}
+.pl{display:flex;align-items:center;gap:6px;padding:10px;border-radius:8px;cursor:pointer;margin-bottom:4px;background:#171a20}
+.pl:hover{background:#1f232b}
+.pl.cur{outline:2px solid #2f6fed}
+.pl .n{margin-left:auto;color:#8a9099;font-size:13px}
+.pl .act{font-size:11px;color:#7fe0a0;font-weight:700}
+.lhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+.lhead input{background:#0b0c0f;border:1px solid #444;color:#eee;border-radius:8px;padding:8px 10px;font-size:16px}
+.lhead .nm{font-size:20px;font-weight:700;min-width:180px;flex:1}
+.srow{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:#171a20;margin-bottom:4px}
+.srow.now{outline:2px solid #ffc53d}
+.srow .num{width:26px;color:#8a9099;text-align:right;font-size:13px}
+.srow .t{flex:1;min-width:0;cursor:pointer}
+.srow .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srow .t span{font-size:12px;color:#8a9099}
+.srow select{background:#2b3038;color:#eee;border:0;border-radius:7px;padding:5px;font-size:13px;max-width:150px}
+.sub{font-size:12px;color:#8a9099;text-transform:uppercase;letter-spacing:.06em;margin:18px 0 8px}
+@media (max-width:700px){#libBody{flex-direction:column}#libLists{width:auto;border-right:0;border-bottom:1px solid #23262c;max-height:34vh}}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#2f6fed;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:30}
 #toast.show{opacity:1}
 </style>
@@ -144,6 +179,7 @@ body.show #phint{display:none}
   <button id="bPrev" title="Previous song">◀</button>
   <select id="songSel" title="Song"></select>
   <button id="bNext" title="Next song">▶</button>
+  <button id="bLib" title="All songs and playlists">📋 Songs</button>
   <button id="bShow" title="Full screen: hide all controls (S)">⛶ Show</button>
   <button id="bPlay" title="Play the song's chords from your keyboard">🎹 Play</button>
   <button id="bNew">＋ New song</button>
@@ -164,7 +200,7 @@ body.show #phint{display:none}
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v15</span>
+  <span class="lbl" title="App version">v16</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -209,6 +245,11 @@ body.show #phint{display:none}
     <span class="lbl">Repeat</span>
     <button data-rep="off">Off</button><button data-rep="4">♩ Quarter</button><button data-rep="8">♪ Eighth</button><button data-rep="16">16th</button>
     <span class="psep"></span>
+    <button id="pMet" title="Metronome click (M)">🥁 Click: off</button>
+    <select id="pBeats" title="Beats per bar"><option value="2">2/4</option><option value="3">3/4</option><option value="4">4/4</option><option value="6">6/8</option></select>
+    <span id="pDots"></span>
+    <span class="lbl">Click vol</span><input id="pCvol" type="range" min="0" max="1" step="0.05">
+    <span class="psep"></span>
     <span class="lbl">Tempo</span>
     <button id="pTd">−</button><input id="pTempo" type="number" min="40" max="240" inputmode="numeric"><button id="pTu">+</button><button id="pTap" title="Tap 4 times in time (or press Enter)">Tap</button>
     <span class="psep"></span>
@@ -216,7 +257,7 @@ body.show #phint{display:none}
     <span style="flex:1"></span>
     <button id="pStop" class="dng">■ Stop</button><button id="pClose">✕ Close</button>
   </div>
-  <div id="phint">Keys play the chords · <b>Space</b> or <b>Esc</b> stop · hold <b>Shift</b> = sustain pedal · <b>1 2 3 4</b> = repeat off / ♩ / ♪ / 16th · <b>Enter</b> = tap tempo</div>
+  <div id="phint">Keys play the chords · <b>Space</b> or <b>Esc</b> stop · hold <b>Shift</b> = sustain pedal · <b>1 2 3 4</b> = repeat off / ♩ / ♪ / 16th · <b>Enter</b> = tap tempo · <b>M</b> = metronome</div>
 </div>
 
 <div id="float"><button id="fPrev">◀</button><button id="fNext">▶</button><button id="fLegend">🎸 Chords</button><button id="fPlay">🎹 Play</button><button id="fEdit">✎ Edit</button></div>
@@ -248,6 +289,13 @@ body.show #phint{display:none}
   </div>
   <div id="legHint">Tap a diagram to hear it. Use ‹ › for other ways to play it.</div>
   <div id="legGrid"></div>
+</div>
+<div id="lib">
+  <div id="libHead"><b>Songs &amp; Playlists</b><button id="libClose">✕ Close</button></div>
+  <div id="libBody">
+    <div id="libLists"></div>
+    <div id="libMain"></div>
+  </div>
 </div>
 <div id="toast"></div>
 
@@ -567,7 +615,7 @@ function playChord(name) {
 /* ================= play mode: chords on the computer keyboard ================= */
 const PKEYS = ['KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyL','Semicolon','KeyQ','KeyW','KeyE','KeyR','KeyT','KeyY','KeyU','KeyI','KeyO','KeyP'];
 const keyLabel = c => c === 'Semicolon' ? ';' : c.replace('Key', '');
-let fadeTimer = null, fadeEndTimer = null;
+let fadeTimer = null, fadeEndTimer = null, metro = null;
 let playOn = false, curPlay = null, pat = null, patTimer = null, shiftDown = false, voices = [], taps = [];
 const held = new Map();          // key code -> chord name
 const psettings = () => { settings.sound = settings.sound || 'guitar'; settings.rep = settings.rep || 'off'; if (settings.vol == null) settings.vol = 0.8; return settings; };
@@ -619,14 +667,47 @@ function playVoice(name, t, o) {
   voices.push(v);
 }
 function patTick() {
+  metroTick();
   if (!pat || !actx) return;
   const step = 60 / tempoNow() / ({ '4': 1, '8': 2, '16': 4 }[settings.rep] || 1);
   while (pat.next < actx.currentTime + 0.12) {
     const off = pat.i % 2 === 1 && settings.rep !== '4';
     choke(pat.next, 0.015);
     playVoice(pat.name, pat.next, { up: off, vel: off ? 0.7 : 1, gate: step * 0.85, tight: true });
-    pat.i++; pat.next += step;
+    pat.i++; if (pat.then) { pat.next = pat.then; pat.then = null; } else pat.next += step;
   }
+}
+function ensureTick() { if (!patTimer) patTimer = setInterval(patTick, 25); }
+const beatsPerBar = () => song().beats || 4;
+function clickAt(t, accent) {
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = 'square'; o.frequency.value = accent ? 1760 : 1100;
+  const v = (settings.cvol == null ? 0.6 : settings.cvol) * (accent ? 0.5 : 0.32);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(v, 0.0002), t + 0.002); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.06);
+}
+function metroTick() {
+  if (!metro || !actx) return;
+  const spb = 60 / tempoNow(), bpb = beatsPerBar();
+  while (metro.next < actx.currentTime + 0.12) {
+    const b = metro.beat % bpb;
+    clickAt(metro.next, b === 0);
+    const when = Math.max(0, (metro.next - actx.currentTime) * 1000);
+    setTimeout(() => paintDots(b), when);
+    metro.beat++; metro.next += spb;
+  }
+}
+function paintDots(b) {
+  const n = beatsPerBar(), el = $('#pDots');
+  if (el.children.length !== n) el.innerHTML = '<i></i>'.repeat(n);
+  [...el.children].forEach((d, i) => { d.className = metro && i === b ? (b === 0 ? 'a' : 'b') : ''; });
+}
+function setMetro(on) {
+  const ctx = audio(); if (!ctx) return;
+  metro = on ? { next: ctx.currentTime + 0.08, beat: 0 } : null;
+  if (on) ensureTick();
+  $('#pMet').textContent = '🥁 Click: ' + (on ? 'ON' : 'off'); $('#pMet').classList.toggle('sel', !!on);
+  paintDots(-1);
 }
 function pressChord(name) {
   const ctx = audio(); if (!ctx) return;
@@ -635,7 +716,14 @@ function pressChord(name) {
   armFade();
   if (psettings().rep !== 'off') {
     pat = { name, next: t, i: 0 };
-    if (!patTimer) patTimer = setInterval(patTick, 25);
+    if (metro) {                // line the strumming up with the metronome's beat
+      const div = { '4': 1, '8': 2, '16': 4 }[settings.rep] || 1, spb = 60 / tempoNow(), step = spb / div;
+      const prevBeat = metro.next - spb, off = ctx.currentTime - prevBeat, m = Math.max(0, Math.floor(off / step));
+      const late = off - m * step;
+      if (late < 0.09) pat = { name, next: t, i: m, then: prevBeat + (m + 1) * step };
+      else pat = { name, next: prevBeat + (m + 1) * step, i: m + 1 };
+    }
+    ensureTick();
     patTick();
   } else { pat = null; choke(t, 0.03); playVoice(name, t); }
 }
@@ -681,6 +769,9 @@ function renderPads() {
   $('#pSus').textContent = 'Sustain: ' + (s.sustain ? 'ON' : 'off'); $('#pSus').classList.toggle('sel', !!s.sustain);
   if (document.activeElement !== $('#pTempo')) $('#pTempo').value = tempoNow();
   $('#pVol').value = s.vol;
+  $('#pCvol').value = s.cvol == null ? 0.6 : s.cvol;
+  $('#pBeats').value = String(beatsPerBar());
+  paintDots(-1);
   const d = s.ring == null ? 8 : s.ring; $('#pDur').value = d; $('#pDurLbl').textContent = d >= 31 ? '∞' : d + 's';
   if (master) master.gain.value = s.vol;
 }
@@ -689,7 +780,7 @@ function setPlay(on) {
   document.body.classList.toggle('playing', on);
   $('#bPlay').classList.toggle('on', on); $('#fPlay').classList.toggle('on', on);
   if (on) { audio(); renderPads(); toast('Play mode: press ' + padMap().slice(0, 4).map(p => keyLabel(p.code)).join(' ') + '… to play the chords'); }
-  else { stopPlay(); held.clear(); }
+  else { stopPlay(); held.clear(); setMetro(false); }
 }
 function setTempo(v) { v = Math.max(40, Math.min(240, Math.round(v))); song().tempo = v; save(); $('#pTempo').value = v; }
 function tapTempo() {
@@ -708,6 +799,9 @@ $('#pTu').onclick = () => setTempo(tempoNow() + 2);
 $('#pTap').onclick = tapTempo;
 $('#pTempo').onchange = e => setTempo(+e.target.value || 100);
 $('#pDur').oninput = e => { settings.ring = +e.target.value; $('#pDurLbl').textContent = settings.ring >= 31 ? '∞' : settings.ring + 's'; save(); };
+$('#pMet').onclick = () => setMetro(!metro);
+$('#pBeats').onchange = e => { song().beats = +e.target.value; save(); if (metro) metro.beat = 0; paintDots(-1); };
+$('#pCvol').oninput = e => { settings.cvol = +e.target.value; save(); };
 $('#pVol').oninput = e => { settings.vol = +e.target.value; if (master) master.gain.value = settings.vol; save(); };
 $('#pctl').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -722,7 +816,7 @@ $('#pads').addEventListener('pointercancel', padUp);
 $('#pads').addEventListener('pointerleave', padUp);
 // the computer keyboard
 document.addEventListener('keydown', e => {
-  if (!playOn || $('#ed').classList.contains('open') || $('#leg').classList.contains('open')) return;
+  if (!playOn || $('#ed').classList.contains('open') || $('#leg').classList.contains('open') || $('#lib').classList.contains('open')) return;
   if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && e.target.type !== 'range') return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key === 'Shift') { shiftDown = true; return; }
@@ -732,6 +826,7 @@ document.addEventListener('keydown', e => {
   else if (e.code === 'Space') { if (!e.repeat) stopPlay(); }
   else if (e.code === 'Escape' && curPlay) { stopPlay(); }
   else if (e.code === 'Enter') { if (!e.repeat) tapTempo(); }
+  else if (e.code === 'KeyM') { if (!e.repeat) setMetro(!metro); }
   else if (['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code)) { settings.rep = ['off', '4', '8', '16'][+e.code.slice(5) - 1]; save(); renderPads(); if (curPlay && settings.rep !== 'off') pressChord(curPlay); }
   else if (i >= 0) { }                               // unused chord key: swallow it so it doesn't trigger shortcuts
   else handled = false;
@@ -851,7 +946,7 @@ async function exportImage() {
 $('#bImg').onclick = () => exportImage().catch(e => toast('Could not make the picture: ' + e.message, 5000));
 
 /* ================= state ================= */
-let songs = [], cur = 0, settings = { theme: 'dark' }, sel = null;   // sel = {l, i?}
+let songs = [], cur = 0, settings = { theme: 'dark' }, sel = null, playlists = [];   // sel = {l, i?}
 const uid = () => Math.random().toString(36).slice(2, 10);
 const song = () => songs[cur];
 const demo = () => ({ id: 'demo-amazing-grace', title: 'Amazing Grace', artist: 'Traditional (example)', key: 'G', lines: textToLines(DEMO_TEXT), transpose: 0, cols: 'auto' });
@@ -860,7 +955,7 @@ function norm(s) {
     lines: Array.isArray(s.lines) ? s.lines : textToLines(s.text || ''), transpose: s.transpose | 0, cols: s.cols || 'auto' };
 }
 function load() {
-  try { const d = JSON.parse(localStorage.getItem(LS)); if (d && Array.isArray(d.songs)) { songs = d.songs.map(norm); cur = d.cur | 0; Object.assign(settings, d.settings || {}); } } catch (e) {}
+  try { const d = JSON.parse(localStorage.getItem(LS)); if (d && Array.isArray(d.songs)) { songs = d.songs.map(norm); cur = d.cur | 0; Object.assign(settings, d.settings || {}); playlists = Array.isArray(d.playlists) ? d.playlists : []; } } catch (e) {}
   if (!songs.length) songs = [demo()];
   if (cur >= songs.length) cur = 0;
 }
@@ -888,7 +983,9 @@ function restore(from, to, word) {
   fillSelect(); render(); paintUndo();
   toast(word === 'undo' ? 'Undone' : 'Redone');
 }
-function save() { if (!restoring) record(); try { localStorage.setItem(LS, JSON.stringify({ songs, cur, settings })); } catch (e) {} if (hooks.saved) hooks.saved(); }
+function save() { if (!restoring) record(); persist(); if (hooks.saved) hooks.saved(); }
+function persist() { try { localStorage.setItem(LS, JSON.stringify({ songs, cur, settings, playlists })); } catch (e) {} }
+function savePl() { persist(); if (hooks.plSaved) hooks.plSaved(); fillSelect(); }
 function merge(list, overwrite) {
   let n = 0;
   for (const s of list || []) {
@@ -994,13 +1091,14 @@ function fit() {
   const anyLine = R.map((r, i) => i > 0 && !R[i - 1].label);
   const opts = pref === 'auto' ? [1, 2, 3, 4] : [+pref];
   let best = null;
-  for (const N of opts) for (const [allowed, pen] of [[atSections, 1], [anyLine, 0.9]]) {
+  for (const N of opts) for (const [allowed, pen] of [[atSections, 1], [anyLine, 0.82]]) {
     const p = partition(R, N, allowed); if (!isFinite(p.h)) continue;
     const n = p.groups.length;
     const s = Math.min(BH / Math.max(p.h, 1), BW / (n * W0 + (n - 1) * 1.6 * F0));
     const font = Math.min(F0 * s, 92), k = font / F0;
-    const widthUsed = Math.min(1, (n * W0 * k + (n - 1) * 1.6 * font) / BW);    // how much of the screen's width gets used
-    const heightUsed = Math.min(1, p.h * k / BH);
+    const capped = font >= 92;   // already as big as text gets: no reason to spread it out
+    const widthUsed = capped ? 1 : Math.min(1, (n * W0 * k + (n - 1) * 1.6 * font) / BW);    // how much of the screen's width gets used
+    const heightUsed = capped ? 1 : Math.min(1, p.h * k / BH);
     const score = font * pen * (1 - 0.03 * (n - 1)) * Math.sqrt(widthUsed) * Math.pow(heightUsed, 0.25);
     if (!best || score > best.score + 0.01) best = { font, groups: p.groups, score, h: p.h * k };
   }
@@ -1017,7 +1115,18 @@ function scale() {
   $('#stage').style.transform = `translate(-50%,-50%) scale(${k})`;
 }
 new ResizeObserver(scale).observe($('#viewport'));
-function fillSelect() { $('#songSel').innerHTML = songs.map((s, i) => `<option value="${esc(s.id)}">${i + 1}. ${esc(s.title || 'Untitled')}</option>`).join(''); }
+const byId = id => songs.find(s => s.id === id);
+const activePl = () => playlists.find(p => p.id === settings.playlist) || null;
+function activeIds() { const p = activePl(); return p ? p.ids.filter(byId) : songs.map(s => s.id); }
+function fillSelect() {
+  const p = activePl(), ids = activeIds(), curId = song() && song().id;
+  let html = `<optgroup label="${esc(p ? 'Playlist: ' + p.name : 'All songs')}">` + ids.map((id, i) => `<option value="${esc(id)}">${i + 1}. ${esc(byId(id).title || 'Untitled')}</option>`).join('') + '</optgroup>';
+  if (curId && !ids.includes(curId)) html += `<optgroup label="Not in this list"><option value="${esc(curId)}">${esc(song().title || 'Untitled')}</option></optgroup>`;
+  $('#songSel').innerHTML = html;
+  if (curId) $('#songSel').value = curId;
+}
+function openSong(id) { const i = songs.findIndex(s => s.id === id); if (i < 0) return; setSel(null); cur = i; save(); fillSelect(); render(); if (hooks.went) hooks.went(id); }
+function nav(d) { const ids = activeIds(); if (!ids.length) return; const pos = ids.indexOf(song().id); openSong(ids[pos < 0 ? 0 : (pos + d + ids.length) % ids.length]); }
 function toast(msg, ms) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), ms || 2200); }
 function go(i) { setSel(null); cur = (i + songs.length) % songs.length; save(); render(); if (hooks.went) hooks.went(song().id); }
 
@@ -1169,7 +1278,11 @@ function openEditor(isNew) {
 const closeEditor = () => $('#ed').classList.remove('open');
 $('#eSave').onclick = () => {
   const data = { title: $('#fTitle').value.trim(), artist: $('#fArtist').value.trim(), key: $('#fKey').value.trim(), lines: textToLines($('#fText').value) };
-  if (editingNew) { songs.splice(cur + 1, 0, norm(data)); cur = songs.length > 1 ? cur + 1 : 0; }
+  if (editingNew) {
+    const ns = norm(data), prevId = song() && song().id;
+    songs.splice(cur + 1, 0, ns); cur = songs.length > 1 ? cur + 1 : 0;
+    const p = activePl(); if (p) { const at = p.ids.indexOf(prevId); p.ids.splice(at < 0 ? p.ids.length : at + 1, 0, ns.id); savePl(); }
+  }
   else Object.assign(song(), data);
   save(); fillSelect(); closeEditor(); render();
   if (editingNew) toast('Now click any word to give it a chord');
@@ -1177,16 +1290,89 @@ $('#eSave').onclick = () => {
 $('#eCancel').onclick = closeEditor;
 $('#eDel').onclick = () => {
   if (!confirm(`Delete "${song().title || 'Untitled'}"?`)) return;
+  const goneId = song().id, before = activeIds(), pos = before.indexOf(goneId);
   songs.splice(cur, 1);
+  if (playlists.some(p => p.ids.includes(goneId))) { playlists.forEach(p => p.ids = p.ids.filter(x => x !== goneId)); savePl(); }
   if (!songs.length) songs = [demo()];
   cur = Math.min(cur, songs.length - 1);
   save(); fillSelect(); closeEditor(); render();
+  const after = activeIds(); if (after.length && pos >= 0) openSong(after[Math.min(pos, after.length - 1)]);
 };
 
+/* ================= songs & playlists page ================= */
+let libView = 'all';
+const plid = () => 'pl-' + Math.random().toString(36).slice(2, 9);
+function openLib() { setSel(null); libView = settings.playlist && activePl() ? settings.playlist : 'all'; renderLib(); $('#lib').classList.add('open'); }
+function closeLib() { $('#lib').classList.remove('open'); }
+function songRow(s, i, inPl) {
+  const p = inPl ? playlists.find(x => x.id === libView) : null;
+  const opts = playlists.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+  return `<div class="srow${s.id === song().id ? ' now' : ''}" data-id="${esc(s.id)}">
+    <span class="num">${i + 1}</span>
+    <div class="t" data-open="1"><b>${esc(s.title || 'Untitled')}</b><span>${esc([s.artist, s.key && 'Key ' + s.key].filter(Boolean).join(' · '))}</span></div>
+    ${inPl ? `<button class="sm" data-up="1" ${i === 0 ? 'disabled' : ''}>↑</button><button class="sm" data-down="1" ${i === p.ids.filter(byId).length - 1 ? 'disabled' : ''}>↓</button><button class="sm dng" data-rm="1">Remove</button>`
+           : (playlists.length ? `<select data-addto="1"><option value="">+ Add to playlist…</option>${opts}</select>` : '')}
+    <button class="sm pri" data-open="1">Open</button></div>`;
+}
+function renderLib() {
+  const ap = activePl();
+  $('#libLists').innerHTML =
+    `<div class="pl${libView === 'all' ? ' cur' : ''}" data-view="all"><b>All songs</b>${!ap ? '<span class="act">▶ IN USE</span>' : ''}<span class="n">${songs.length}</span></div>` +
+    playlists.map(p => `<div class="pl${libView === p.id ? ' cur' : ''}" data-view="${esc(p.id)}"><b>${esc(p.name)}</b>${ap && ap.id === p.id ? '<span class="act">▶ IN USE</span>' : ''}<span class="n">${p.ids.filter(byId).length}</span></div>`).join('') +
+    `<button class="pri" id="plNew" style="width:100%;margin-top:8px">＋ New playlist</button>`;
+  const M = $('#libMain');
+  if (libView === 'all' || !playlists.find(p => p.id === libView)) {
+    libView = 'all';
+    M.innerHTML = `<div class="lhead"><div class="nm">All songs</div>
+      ${ap ? '<button id="plUse" class="pri">▶ Use all songs</button>' : '<span style="color:#7fe0a0;font-size:13px">◀ ▶ arrows go through all songs</span>'}
+      <input id="libFind" placeholder="Find a song" value="${esc($('#libFind') ? $('#libFind').value : '')}"></div>
+      <div id="libRows"></div>`;
+    const q = $('#libFind').value.toLowerCase();
+    $('#libRows').innerHTML = songs.filter(s => !q || (s.title + ' ' + s.artist).toLowerCase().includes(q)).map((s, i) => songRow(s, i, false)).join('') || '<div class="sub">No songs match</div>';
+  } else {
+    const p = playlists.find(x => x.id === libView), list = p.ids.map(byId).filter(Boolean);
+    const others = songs.filter(s => !p.ids.includes(s.id));
+    M.innerHTML = `<div class="lhead"><input class="nm" id="plName" value="${esc(p.name)}" title="Playlist name">
+      ${ap && ap.id === p.id ? '<span style="color:#7fe0a0;font-size:13px">◀ ▶ arrows go through this list</span>' : '<button id="plUse" class="pri">▶ Use this playlist</button>'}
+      <button id="plDel" class="dng">Delete playlist</button></div>
+      ${list.length ? list.map((s, i) => songRow(s, i, true)).join('') : '<div class="sub">This playlist is empty. Add songs below.</div>'}
+      <div class="sub">Add songs to “${esc(p.name)}”</div>
+      ${others.length ? others.map(s => `<div class="srow" data-id="${esc(s.id)}"><div class="t" data-open="1"><b>${esc(s.title || 'Untitled')}</b><span>${esc(s.artist || '')}</span></div><button class="sm pri" data-add="1">＋ Add</button></div>`).join('') : '<div class="sub">Every song is already in this playlist</div>'}`;
+    $('#plName').oninput = e => { p.name = e.target.value || 'Untitled playlist'; savePl(); $('#libLists').querySelectorAll('.pl.cur b').forEach(b => b.textContent = p.name); };
+  }
+  const f = $('#libFind'); if (f) f.oninput = () => { const pos = f.selectionStart; renderLib(); const g = $('#libFind'); g.focus(); g.setSelectionRange(pos, pos); };
+}
+$('#bLib').onclick = openLib;
+$('#libClose').onclick = closeLib;
+$('#lib').addEventListener('click', e => {
+  const v = e.target.closest('[data-view]'); if (v) { libView = v.dataset.view; renderLib(); return; }
+  const b = e.target.closest('button');
+  if (b && b.id === 'plNew') { const p = { id: plid(), name: 'New playlist ' + (playlists.length + 1), ids: [] }; playlists.push(p); savePl(); libView = p.id; renderLib(); setTimeout(() => { const n = $('#plName'); n.focus(); n.select(); }, 30); return; }
+  if (b && b.id === 'plUse') { settings.playlist = libView === 'all' ? null : libView; save(); fillSelect(); const ids = activeIds(); if (ids.length && !ids.includes(song().id)) openSong(ids[0]); renderLib(); toast(libView === 'all' ? 'Using all songs' : 'Now using “' + activePl().name + '”'); return; }
+  if (b && b.id === 'plDel') { const p = playlists.find(x => x.id === libView); if (!confirm(`Delete the playlist “${p.name}”? (The songs stay in All songs.)`)) return; playlists = playlists.filter(x => x !== p); if (settings.playlist === p.id) settings.playlist = null; save(); savePl(); libView = 'all'; renderLib(); return; }
+  const row = e.target.closest('.srow'); if (!row) return;
+  const id = row.dataset.id, p = playlists.find(x => x.id === libView);
+  if (e.target.closest('[data-open]')) { openSong(id); closeLib(); return; }
+  if (!b || !p) return;
+  if (b.dataset.add) { p.ids.push(id); savePl(); renderLib(); return; }
+  if (b.dataset.rm) { p.ids = p.ids.filter(x => x !== id); savePl(); renderLib(); return; }
+  if (b.dataset.up || b.dataset.down) {
+    const ids = p.ids.filter(byId), i = ids.indexOf(id), j = i + (b.dataset.up ? -1 : 1);
+    if (j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j], ids[i]]; p.ids = ids; savePl(); renderLib();
+  }
+});
+$('#lib').addEventListener('change', e => {
+  const s = e.target.closest('[data-addto]'); if (!s || !s.value) return;
+  const p = playlists.find(x => x.id === s.value), id = e.target.closest('.srow').dataset.id;
+  if (p && !p.ids.includes(id)) { p.ids.push(id); savePl(); toast('Added to “' + p.name + '”'); } else toast('Already in “' + p.name + '”');
+  renderLib();
+});
+
 /* ================= toolbar ================= */
-$('#bPrev').onclick = () => go(cur - 1);
-$('#bNext').onclick = () => go(cur + 1);
-$('#songSel').onchange = e => go(songs.findIndex(s => s.id === e.target.value));
+$('#bPrev').onclick = () => nav(-1);
+$('#bNext').onclick = () => nav(1);
+$('#songSel').onchange = e => openSong(e.target.value);
 $('#bNew').onclick = () => openEditor(true);
 $('#bUndo').onclick = () => restore(undoStack, redoStack, 'undo');
 $('#bRedo').onclick = () => restore(redoStack, undoStack, 'redo');
@@ -1234,8 +1420,8 @@ function flashFloat(on) {
 }
 $('#bShow').onclick = () => setShow(true);
 $('#fEdit').onclick = () => setShow(false);
-$('#fPrev').onclick = () => { go(cur - 1); flashFloat(true); };
-$('#fNext').onclick = () => { go(cur + 1); flashFloat(true); };
+$('#fPrev').onclick = () => { nav(-1); flashFloat(true); };
+$('#fNext').onclick = () => { nav(1); flashFloat(true); };
 $('#viewport').addEventListener('click', e => { if (document.body.classList.contains('show') && !e.target.closest('.ch')) flashFloat(true); });
 document.addEventListener('mousemove', () => { if (document.body.classList.contains('show')) flashFloat(true); });
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && document.body.classList.contains('show')) setShow(false); });
@@ -1243,6 +1429,7 @@ document.addEventListener('fullscreenchange', () => { if (!document.fullscreenEl
 document.addEventListener('keydown', e => {
   if ($('#ed').classList.contains('open')) { if (e.key === 'Escape') closeEditor(); return; }
   if ($('#leg').classList.contains('open')) { if (e.key === 'Escape') $('#leg').classList.remove('open'); return; }
+  if ($('#lib').classList.contains('open')) { if (e.key === 'Escape') closeLib(); return; }
   if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
   if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z' || e.key === 'y')) {
     e.preventDefault();
@@ -1252,8 +1439,8 @@ document.addEventListener('keydown', e => {
   const show = document.body.classList.contains('show');
   if (e.key === 'Escape') { if (show) setShow(false); else if (sel) setSel(null); return; }
   if (sel && !show) { if (e.key === 'ArrowRight') { e.preventDefault(); step(1); } else if (e.key === 'ArrowLeft') { e.preventDefault(); step(-1); } return; }
-  if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); go(cur + 1); }
-  else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); go(cur - 1); }
+  if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); nav(1); }
+  else if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); nav(-1); }
   else if (e.key === 's' || e.key === 'S') setShow(!show);
 });
 
@@ -1278,13 +1465,15 @@ window.StageApp = {
     songs = next.length ? next : [demo()];
     const i = songs.findIndex(s => s.id === curId);
     cur = i >= 0 ? i : Math.min(cur, songs.length - 1);
-    try { localStorage.setItem(LS, JSON.stringify({ songs, cur, settings })); } catch (e) {}
+    persist();
     lastSnap = JSON.stringify(songs);
     fillSelect(); render();
   },
+  get playlists() { return playlists; },
+  setPlaylists(list) { playlists = Array.isArray(list) ? list : []; persist(); fillSelect(); if ($('#lib').classList.contains('open')) renderLib(); },
   goId(id) { const i = songs.findIndex(s => s.id === id); if (i >= 0 && i !== cur) { setSel(null); cur = i; render(); } },
 };
-load(); lastSnap = JSON.stringify(songs); fillSelect(); scale(); render(); paintUndo();
+load(); lastSnap = JSON.stringify(songs); if (settings.playlist && !activePl()) settings.playlist = null; fillSelect(); scale(); render(); paintUndo();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fit(); });
 loadRepoSongs();
 })();
@@ -1389,6 +1578,26 @@ async function start() {
     saveKnown();
     await Promise.all(jobs);
   }
+
+  /* ---- playlists: one cloud document holds them all ---- */
+  const plRef = doc(db, 'live', 'playlists');
+  let plPushed = null, plGot = false, plMissing = false, plTimer = null;
+  const pushPl = () => {
+    if (!canWrite) return;
+    const data = JSON.stringify(App.playlists);
+    if (data === plPushed) return;
+    plPushed = data; plMissing = false;
+    setDoc(plRef, { data, at: serverTimestamp() }).catch(e => { plPushed = null; fail(e); });
+  };
+  onSnapshot(plRef, d => {
+    plGot = true;
+    if (!d.exists()) { plMissing = true; if (canWrite && App.playlists.length) pushPl(); return; }
+    if (d.metadata.hasPendingWrites) return;
+    const data = d.data().data; plPushed = data;
+    if (data !== JSON.stringify(App.playlists)) { try { App.setPlaylists(JSON.parse(data)); } catch (e) {} }
+  }, () => {});
+  App.hooks.plSaved = () => { if (canWrite && plGot) { clearTimeout(plTimer); plTimer = setTimeout(pushPl, 600); } };
+  onAuthStateChanged(auth, u => { if (u && plMissing && App.playlists.length) pushPl(); });
 
   /* ---- follow the leader: one screen picks the song, the others jump to it ---- */
   let live = localStorage.getItem('stagecharts.live') === '1';
