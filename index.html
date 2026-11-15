@@ -72,6 +72,11 @@ body:not(.show) .p:hover{background:rgba(92,200,255,.16)}
 body:not(.show) .gap{outline:2px dashed rgba(128,128,128,.25);outline-offset:-2px}
 .sel{outline:4px solid #5cc8ff!important;outline-offset:2px;background:rgba(92,200,255,.18)}
 body.show .add,body.show .empty{display:none}
+body:not(.show) .ch:not(:empty){cursor:grab;touch-action:none}
+body.dragging,body.dragging *{cursor:grabbing!important}
+.droptgt{background:rgba(255,197,61,.28)!important;outline:3px dashed #ffc53d;outline-offset:2px;border-radius:.15em}
+#dragGhost{position:fixed;z-index:50;pointer-events:none;transform:translate(-50%,-120%);background:#ffc53d;color:#111;font-weight:800;font-size:22px;padding:4px 12px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+#panel .psp{width:12px}
 body.show .gap{outline:none}
 /* chord panel */
 #panel{flex:none;display:none;background:#1b1e24;border-top:2px solid #2f6fed;padding:8px 10px 10px;max-height:46vh;overflow:auto}
@@ -217,7 +222,7 @@ body.show #phint{display:none}
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v19</span>
+  <span class="lbl" title="App version">v20</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -1303,7 +1308,8 @@ function buildPanel(focus) {
   <div class="prow"><span class="word">${k.t ? `Chord over <b>“${esc(k.t)}”</b>` : 'Chord with no word under it'}</span>
     <input id="cIn" value="${esc(disp(s, k.c || ''))}" placeholder="type: Am7" autocomplete="off" autocapitalize="characters" spellcheck="false">
     <button data-act="clear">Remove</button>
-    <button data-act="prev">◀ Prev</button><button data-act="next" class="pri">Next word ▶</button><button data-act="done">Done</button></div>
+    <button data-act="prev">◀ Prev</button><button data-act="next" class="pri">Next word ▶</button><button data-act="done">Done</button>
+    ${k.c ? '<span class="psp"></span><button data-act="mvl" title="Move this chord to the word before (Alt+←)">⇠ Move chord</button><button data-act="mvr" title="Move this chord to the next word (Alt+→)">Move chord ⇢</button>' : ''}</div>
   <div class="prow palrow"><span class="lbl">Song chords</span>
     ${editingPal ? `<input id="palIn" class="wide" value="${esc(pal.join(' '))}" placeholder="e.g. C C7 F G G7" autocapitalize="characters" spellcheck="false"><button data-act="palsave" class="pri">Save list</button><button data-act="palcancel">Cancel</button>`
       : (pal.length ? pal.map(chip).join('') : '<span class="hint">None set yet</span>') + `<button data-act="paledit" class="q">✎ ${s.palette && s.palette.length ? 'Edit list' : 'Set list'}</button>`}
@@ -1341,6 +1347,7 @@ $('#panel').addEventListener('click', e => {
   }
   if (b.dataset.lab) { s.lines[sel.l].t = b.dataset.lab; $('#lIn').value = b.dataset.lab; save(); render(); return; }
   const a = b.dataset.act;
+  if (a === 'mvl' || a === 'mvr') { nudgeChord(a === 'mvl' ? -1 : 1); return; }
   if (a === 'stamp') { stampOn = !stampOn; brush = stampOn ? (($('#cIn') && $('#cIn').value.trim()) || null) : null; buildPanel(); toast(stampOn ? 'Stamp on: pick a chord, then click words' : 'Stamp off'); return; }
   if (a === 'erase') { brush = ''; buildPanel(); return; }
   if (a === 'paledit') { editingPal = true; buildPanel(); return; }
@@ -1353,7 +1360,67 @@ $('#panel').addEventListener('click', e => {
   else if (a === 'done') { stampOn = false; brush = null; editingPal = false; setSel(null); }
   else if (a === 'dellabel' || a === 'delline') { s.lines.splice(sel.l, 1); save(); setSel(null); }
 });
+/* ---- moving chords: drag a chord onto another word, or nudge it one word at a time ---- */
+function tokAt(l, i) { const L = song().lines[l]; return L && L.k === 'line' ? L.toks[i] : null; }
+function selectTok(tok) {      // re-find a token after the lines changed and select it
+  song().lines.forEach((L, l) => { if (L.k === 'line') { const i = L.toks.indexOf(tok); if (i >= 0) sel = { l, i }; } });
+  document.body.classList.add('has-sel'); render(); buildPanel();
+}
+function moveChord(src, dst) {
+  if (!src || !dst || src === dst || !src.c) return;
+  const c = src.c; src.c = dst.c || ''; dst.c = c;     // if the target already had a chord, the two swap
+  save(); cleanup(); selectTok(dst);
+}
+function nudgeChord(d) {
+  const src = sel && curTok(); if (!src || !src.c) return;
+  const all = []; song().lines.forEach(L => { if (L.k === 'line') L.toks.forEach(k => all.push(k)); });
+  const j = all.indexOf(src) + d;
+  if (j < 0 || j >= all.length) return;
+  moveChord(src, all[j]);
+}
+let drag = null, justDragged = false;
+$('#body').addEventListener('pointerdown', e => {
+  if (document.body.classList.contains('show') || e.button > 0) return;
+  const ch = e.target.closest('.ch'); if (!ch || !ch.textContent.trim()) return;
+  const p = ch.closest('.p'); if (!p) return;
+  drag = { l: +p.dataset.l, i: +p.dataset.i, x: e.clientX, y: e.clientY, on: false, text: ch.textContent.trim(), id: e.pointerId };
+});
+window.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  if (!drag.on) {
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 7) return;
+    drag.on = true;
+    const g = document.createElement('div'); g.id = 'dragGhost'; g.textContent = drag.text; document.body.appendChild(g);
+    document.body.classList.add('dragging');
+  }
+  e.preventDefault();
+  const g = $('#dragGhost'); g.style.left = e.clientX + 'px'; g.style.top = e.clientY + 'px';
+  document.querySelectorAll('.droptgt').forEach(x => x.classList.remove('droptgt'));
+  const under = document.elementFromPoint(e.clientX, e.clientY), t = under && (under.closest('#body .p') || under.closest('#body .add'));
+  if (t) t.classList.add('droptgt');
+}, { passive: false });
+function endDrag(e) {
+  if (!drag || (e && e.pointerId !== drag.id)) return;
+  const d = drag; drag = null;
+  if (!d.on) return;
+  justDragged = true; setTimeout(() => justDragged = false, 50);
+  $('#dragGhost') && $('#dragGhost').remove(); document.body.classList.remove('dragging');
+  document.querySelectorAll('.droptgt').forEach(x => x.classList.remove('droptgt'));
+  if (!e) return;
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  const src = tokAt(d.l, d.i);
+  const p = under && under.closest('#body .p'), add = under && under.closest('#body .add');
+  if (p) moveChord(src, tokAt(+p.dataset.l, +p.dataset.i));
+  else if (add) { const L = song().lines[+add.dataset.l]; const nt = { c: '', t: '' }; L.toks.push(nt); moveChord(src, nt); }
+}
+window.addEventListener('pointerup', endDrag);
+window.addEventListener('pointercancel', () => endDrag(null));
+document.addEventListener('keydown', e => {
+  if (!e.altKey || !sel || document.body.classList.contains('show') || $('#ed').classList.contains('open')) return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); e.stopImmediatePropagation(); nudgeChord(e.key === 'ArrowLeft' ? -1 : 1); }
+}, true);
 $('#body').addEventListener('click', e => {
+  if (justDragged) return;
   const chEl = e.target.closest('.ch');
   if (chEl && chEl.textContent.trim()) playChord(chEl.textContent.trim());
   if (document.body.classList.contains('show')) return;
