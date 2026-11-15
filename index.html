@@ -40,7 +40,8 @@ body.cloud .cloudOnly{display:inline-block!important}
 .col{flex:1 1 0;min-width:0;position:relative;align-self:stretch}
 .col+.col::before{content:'';position:absolute;left:-.8em;top:0;bottom:0;border-left:2px solid var(--rule)}
 .rl{padding-top:calc(.3em + var(--sp,0em))}
-.col>.rl:first-child{padding-top:0}
+.col>.rl:first-child,.col>.gap:first-child+.rl{padding-top:0}
+.col>.gap:first-child,.col>.gap:last-child{height:6px}
 body.show .col>.gap:first-child,body.show .col>.gap:last-child{display:none}
 .sh{color:var(--head);font-weight:800;font-size:.72em;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.1em;display:inline-block}
 .gap{height:.45em}
@@ -163,7 +164,7 @@ body.show #phint{display:none}
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v14</span>
+  <span class="lbl" title="App version">v15</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
