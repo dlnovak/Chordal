@@ -34,12 +34,17 @@ body.cloud .cloudOnly{display:inline-block!important}
 #title{font-size:58px;font-weight:800;color:var(--lyric);line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #artist{font-size:34px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
 #key{font-size:36px;font-weight:700;color:var(--chord);white-space:nowrap}
-#body{flex:1;min-height:0;overflow:hidden;column-fill:auto;column-gap:1.6em;column-rule:2px solid var(--rule);color:var(--lyric)}
-.sec{break-inside:avoid;-webkit-column-break-inside:avoid;padding-bottom:.35em}
+#body{flex:1;min-height:0;overflow:hidden;display:flex;column-gap:1.6em;color:var(--lyric);align-items:flex-start}
+#body.measure{display:block}
+#body.measure .row{width:max-content}
+.col{flex:1 1 0;min-width:0;position:relative;align-self:stretch}
+.col+.col::before{content:'';position:absolute;left:-.8em;top:0;bottom:0;border-left:2px solid var(--rule)}
+.rl{padding-top:calc(.3em + var(--sp,0em))}
+.col>.rl:first-child{padding-top:0}
+body.show .col>.gap:first-child,body.show .col>.gap:last-child{display:none}
 .sh{color:var(--head);font-weight:800;font-size:.72em;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.1em;display:inline-block}
 .gap{height:.45em}
-.nowrap .ln{flex-wrap:nowrap}
-.ln{display:flex;flex-wrap:wrap;align-items:flex-start;line-height:1.08;margin-bottom:.12em}
+.ln{display:flex;flex-wrap:nowrap;align-items:flex-start;line-height:1.08;padding-bottom:calc(.12em + var(--sp,0em))}
 .g{display:inline-flex;white-space:nowrap}
 .p{display:inline-flex;flex-direction:column;border-radius:.12em}
 .ch{color:var(--chord);font-weight:800;font-size:.86em;min-height:1.18em;white-space:pre;padding-right:.3em}
@@ -158,7 +163,7 @@ body.show #phint{display:none}
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v13</span>
+  <span class="lbl" title="App version">v14</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -828,12 +833,9 @@ async function exportImage() {
   };
   draw($('#title'), true); draw($('#artist'), true); draw($('#key'));
   st.querySelectorAll('#body .sh, #body .ch, #body .ly').forEach(el => draw(el));
-  const body = $('#body'), bcs = getComputedStyle(body), bb = box(body), n = +body.style.columnCount || 1;
-  if (n > 1) {
-    const gap = parseFloat(bcs.columnGap), cw = (bb.w - gap * (n - 1)) / n, rw = parseFloat(bcs.columnRuleWidth) || 2;
-    ctx.fillStyle = bcs.columnRuleColor;
-    for (let i = 1; i < n; i++) { const x = bb.x + i * cw + (i - 0.5) * gap; if (maxX > x) ctx.fillRect(x - rw / 2, bb.y, rw, bb.h); }
-  }
+  const body = $('#body'), F = parseFloat(body.style.fontSize) || 40;
+  ctx.fillStyle = getComputedStyle(st).getPropertyValue('--rule').trim() || 'rgba(255,255,255,.14)';
+  [...body.querySelectorAll('.col')].slice(1).forEach(c => { const cb = box(c); ctx.fillRect(cb.x - 0.8 * F - 1, cb.y, 2, cb.h); });
   if (!wasShow) { document.body.classList.remove('show'); fit(); }
   const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
   const name = ((song().title || 'song').replace(/[^\w\- ]+/g, '').trim() || 'song') + '.png';
@@ -925,7 +927,7 @@ function lineHTML(L, l, s) {
   });
   if (open) html += '</span>';
   html += `<span class="add" data-l="${l}"><b data-add="${l}">＋</b></span>`;
-  const cls = 'ln' + (hasC ? '' : ' noch') + (hasT ? '' : ' only') + (toks.length ? '' : ' empty');
+  const cls = 'row ln' + (hasC ? '' : ' noch') + (hasT ? '' : ' only') + (toks.length ? '' : ' empty');
   return `<div class="${cls}">${html}</div>`;
 }
 function render() {
@@ -934,15 +936,13 @@ function render() {
   $('#title').textContent = s.title || 'Untitled';
   $('#artist').textContent = s.artist || '';
   $('#key').textContent = key ? 'Key: ' + disp(s, key) + (n ? `  (orig ${key})` : '') : (n ? `Transposed ${n > 0 ? '+' : ''}${n}` : '');
-  let html = '', open = false;
-  const close = () => { if (open) { html += '</div>'; open = false; } };
+  let html = '';
   s.lines.forEach((L, l) => {
-    if (L.k === 'gap') { close(); html += `<div class="gap${sel && sel.l === l ? ' sel' : ''}" data-l="${l}"></div>`; return; }
-    if (L.k === 'label') { close(); html += '<div class="sec">'; open = true; html += `<div class="sh${sel && sel.l === l ? ' sel' : ''}" data-l="${l}">${esc(L.t)}</div>`; return; }
-    if (!open) { html += '<div class="sec">'; open = true; }
-    html += lineHTML(L, l, s);
+    const isSel = sel && sel.l === l && sel.i == null;
+    if (L.k === 'gap') html += `<div class="row gap${isSel ? ' sel' : ''}" data-l="${l}"></div>`;
+    else if (L.k === 'label') html += `<div class="row rl"><div class="sh${isSel ? ' sel' : ''}" data-l="${l}">${esc(L.t)}</div></div>`;
+    else html += lineHTML(L, l, s);
   });
-  close();
   $('#body').innerHTML = s.lines.length ? html : '<div id="empty">Tap <b>✎ Lyrics</b> to paste the words of this song.</div>';
   $('#tLbl').textContent = n ? (n > 0 ? '+' : '') + n : '0';
   $('#bUp').disabled = n >= 8; $('#bDown').disabled = n <= -8;
@@ -953,32 +953,62 @@ function render() {
   fit();
   if (playOn) renderPads();
 }
-const fits = b => {
-  if (b.scrollWidth > b.clientWidth + 2 || b.scrollHeight > b.clientHeight + 2) return false;
-  if (b.classList.contains('nowrap')) for (const ln of b.querySelectorAll('.ln')) if (ln.scrollWidth > ln.clientWidth + 1) return false;
-  return true;
-};
-function fit() {
-  const b = $('#body'), pref = song().cols || 'auto';
-  const opts = pref === 'auto' ? [1, 2, 3, 4] : [+pref];
-  // try every column count, first keeping each lyric line on one row, then allowing wraps;
-  // wrapping is only used when it makes the text a lot bigger
-  let best = null;
-  for (const wrap of [false, true]) {
-    b.classList.toggle('nowrap', !wrap);
-    for (const c of opts) {
-      b.style.columnCount = c;
-      let lo = 12, hi = 92;
-      b.style.fontSize = hi + 'px';
-      if (fits(b)) lo = hi;
-      else for (let k = 0; k < 10; k++) { const m = (lo + hi) / 2; b.style.fontSize = m + 'px'; if (fits(b)) lo = m; else hi = m; }
-      const score = lo * (wrap ? 0.62 : 1) * (1 - 0.03 * (c - 1));
-      if (!best || score > best.score) best = { size: lo, cols: c, wrap, score };
+/* Layout: try 1-4 columns, split the song evenly between them (at section breaks when possible),
+   and use whichever arrangement gives the biggest text. Lines are never wrapped. */
+function partition(R, N, allowed) {
+  const n = R.length, pre = [0];
+  R.forEach((r, i) => pre.push(pre[i] + r.h));
+  const seg = (i, j) => { let a = i, b = j; while (a < b && R[a].gap) a++; while (b > a && R[b - 1].gap) b--; return pre[b] - pre[a]; };
+  const INF = Infinity, dp = [], par = [];
+  for (let k = 0; k <= N; k++) { dp.push(new Array(n + 1).fill(INF)); par.push(new Array(n + 1).fill(-1)); }
+  dp[0][0] = 0;
+  for (let k = 1; k <= N; k++) for (let j = 1; j <= n; j++) {
+    if (j < n && !allowed[j]) continue;
+    for (let i = 0; i < j; i++) {
+      if (i > 0 && !allowed[i]) continue;
+      if (dp[k - 1][i] === INF) continue;
+      const v = Math.max(dp[k - 1][i], seg(i, j));
+      if (v < dp[k][j]) { dp[k][j] = v; par[k][j] = i; }
     }
   }
-  b.classList.toggle('nowrap', !best.wrap);
-  b.style.columnCount = best.cols;
-  b.style.fontSize = best.size + 'px';
+  let bestK = 1;
+  for (let k = 1; k <= N; k++) if (dp[k][n] < dp[bestK][n] - 0.5) bestK = k;
+  if (!isFinite(dp[bestK][n])) return { h: Infinity, groups: [] };
+  const cuts = []; let j = n;
+  for (let k = bestK; k > 0; k--) { const i = par[k][j]; cuts.unshift([i, j]); j = i; }
+  return { h: dp[bestK][n], groups: cuts };
+}
+function fit() {
+  const b = $('#body'), pref = song().cols || 'auto';
+  const rows = [...b.querySelectorAll('.row')];
+  rows.forEach(r => b.appendChild(r));
+  b.querySelectorAll('.col').forEach(c => c.remove());
+  if (!rows.length) { b.className = ''; return; }
+  const F0 = 40;
+  b.className = 'measure'; b.style.fontSize = F0 + 'px'; b.style.setProperty('--sp', '0em');
+  const R = rows.map(r => ({ h: r.offsetHeight, w: r.offsetWidth, gap: r.classList.contains('gap'), label: r.classList.contains('rl') }));
+  b.className = '';
+  const BW = b.clientWidth, BH = b.clientHeight, W0 = Math.max(...R.map(r => r.w), 1);
+  const atSections = R.map((r, i) => i > 0 && (r.label || r.gap || R[i - 1].gap));
+  const anyLine = R.map((r, i) => i > 0 && !R[i - 1].label);
+  const opts = pref === 'auto' ? [1, 2, 3, 4] : [+pref];
+  let best = null;
+  for (const N of opts) for (const [allowed, pen] of [[atSections, 1], [anyLine, 0.9]]) {
+    const p = partition(R, N, allowed); if (!isFinite(p.h)) continue;
+    const n = p.groups.length;
+    const s = Math.min(BH / Math.max(p.h, 1), BW / (n * W0 + (n - 1) * 1.6 * F0));
+    const font = Math.min(F0 * s, 92), k = font / F0;
+    const widthUsed = Math.min(1, (n * W0 * k + (n - 1) * 1.6 * font) / BW);    // how much of the screen's width gets used
+    const heightUsed = Math.min(1, p.h * k / BH);
+    const score = font * pen * (1 - 0.03 * (n - 1)) * Math.sqrt(widthUsed) * Math.pow(heightUsed, 0.25);
+    if (!best || score > best.score + 0.01) best = { font, groups: p.groups, score, h: p.h * k };
+  }
+  b.style.fontSize = Math.max(10, best.font * 0.985) + 'px';
+  // leftover height: spread the lines out (up to about half a line extra) so the chart fills the screen
+  const tallest = best.groups.reduce((m, [i, j]) => Math.max(m, R.slice(i, j).filter(r => !r.gap).length), 1);
+  const extraEm = Math.max(0, Math.min(0.75, (BH * 0.97 - best.h) / tallest / best.font));
+  b.style.setProperty('--sp', extraEm.toFixed(3) + 'em');
+  best.groups.forEach(([i, j]) => { const c = document.createElement('div'); c.className = 'col'; rows.slice(i, j).forEach(r => c.appendChild(r)); b.appendChild(c); });
 }
 function scale() {
   const vp = $('#viewport');
