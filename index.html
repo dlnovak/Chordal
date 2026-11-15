@@ -109,6 +109,12 @@ body.show .bar,body.show #panel{display:none!important}
 #edBox input{flex:1;min-width:120px;background:#0f1115;border:1px solid #333;color:#eee;border-radius:8px;padding:9px 10px}
 #edBox input#fKey{flex:0 0 100px;min-width:0}
 #fText{flex:1;background:#0f1115;border:1px solid #333;color:#eee;border-radius:8px;padding:10px;font-family:ui-monospace,Menlo,Consolas,"Courier New",monospace;font-size:14px;line-height:1.4;resize:none;white-space:pre;overflow:auto}
+#fPls{align-items:center;gap:6px;font-size:14px;color:#bbb}
+#fPls .plab{font-size:12px;color:#8a9099;text-transform:uppercase;letter-spacing:.06em;margin-right:4px}
+#fPls label{display:inline-flex;align-items:center;gap:6px;background:#0f1115;border:1px solid #333;border-radius:8px;padding:7px 10px;cursor:pointer;color:#ddd}
+#fPls label.on{border-color:#2f6fed;background:#16233b;color:#fff}
+#fPls input{width:16px;height:16px;flex:none;min-width:0;margin:0}
+#fPls button{padding:7px 12px!important}
 #edBox .help{font-size:12.5px;color:#9aa0a8;line-height:1.45}
 #edBox button{background:#2b3038;color:#eee;border:0;border-radius:8px;padding:9px 16px;cursor:pointer}
 #edBox button.pri{background:#2f6fed}
@@ -222,7 +228,7 @@ body.show #phint{display:none}
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v20</span>
+  <span class="lbl" title="App version">v21</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -293,6 +299,7 @@ body.show #phint{display:none}
       <input id="fKey" placeholder="Key (e.g. C)">
     </div>
     <div class="row"><input id="fChords" placeholder="Chords in this song (optional), e.g. C C7 F G G7" autocapitalize="characters" spellcheck="false"></div>
+    <div class="row" id="fPls"></div>
     <textarea id="fText" spellcheck="false" placeholder="Paste the lyrics here, one line per line.&#10;&#10;Leave a blank line between verses.&#10;&#10;Then tap Done and click any word to put a chord over it."></textarea>
     <div class="help">
       Just paste the words. After you tap <b>Done</b>, click a word on the chart to put a chord on it, and use the blue buttons to add Chorus, Break, Repeat and so on.<br>
@@ -1470,13 +1477,28 @@ $('#secbar').addEventListener('click', e => {
 });
 
 /* ================= lyrics dialog ================= */
-let editingNew = false;
+let editingNew = false, plChecks = new Set();
+function renderPlChecks() {
+  $('#fPls').innerHTML = '<span class="plab">Playlists</span>' +
+    playlists.map(p => `<label class="${plChecks.has(p.id) ? 'on' : ''}"><input type="checkbox" data-pl="${esc(p.id)}" ${plChecks.has(p.id) ? 'checked' : ''}>${esc(p.name)}</label>`).join('') +
+    '<button type="button" id="fPlNew">＋ New playlist</button>';
+}
+$('#fPls').addEventListener('change', e => { const c = e.target.closest('[data-pl]'); if (!c) return; c.checked ? plChecks.add(c.dataset.pl) : plChecks.delete(c.dataset.pl); renderPlChecks(); });
+$('#fPls').addEventListener('click', e => {
+  if (!e.target.closest('#fPlNew')) return;
+  const name = prompt('Name for the new playlist'); if (!name || !name.trim()) return;
+  const p = { id: 'pl-' + Math.random().toString(36).slice(2, 9), name: name.trim(), ids: [] };
+  playlists.push(p); plChecks.add(p.id); savePl(); renderPlChecks();
+});
 function openEditor(isNew) {
   setSel(null);
   editingNew = isNew;
   const s = isNew ? norm({}) : song();
   $('#fTitle').value = s.title; $('#fArtist').value = s.artist; $('#fKey').value = s.key; $('#fText').value = linesToText(s.lines);
   $('#fChords').value = (s.palette || []).join(' ');
+  const ap = activePl();
+  plChecks = new Set(isNew ? (ap ? [ap.id] : []) : playlists.filter(p => p.ids.includes(s.id)).map(p => p.id));
+  renderPlChecks();
   $('#eDel').style.visibility = isNew ? 'hidden' : 'visible';
   $('#ed').classList.add('open');
   setTimeout(() => (isNew ? $('#fTitle') : $('#fText')).focus(), 30);
@@ -1489,9 +1511,18 @@ $('#eSave').onclick = () => {
   if (editingNew) {
     const ns = norm(data), prevId = song() && song().id;
     songs.splice(cur + 1, 0, ns); cur = songs.length > 1 ? cur + 1 : 0;
-    const p = activePl(); if (p) { const at = p.ids.indexOf(prevId); p.ids.splice(at < 0 ? p.ids.length : at + 1, 0, ns.id); savePl(); }
+    playlists.forEach(p => {
+      if (!plChecks.has(p.id)) return;
+      const at = p === activePl() ? p.ids.indexOf(prevId) : -1;     // in the playlist you're using, it goes right after the current song
+      p.ids.splice(at < 0 ? p.ids.length : at + 1, 0, ns.id);
+    });
   }
-  else { Object.assign(song(), data); if (!data.palette) delete song().palette; }
+  else {
+    Object.assign(song(), data); if (!data.palette) delete song().palette;
+    const id = song().id;
+    playlists.forEach(p => { const has = p.ids.includes(id); if (plChecks.has(p.id) && !has) p.ids.push(id); if (!plChecks.has(p.id) && has) p.ids = p.ids.filter(x => x !== id); });
+  }
+  savePl();
   save(); fillSelect(); closeEditor(); render();
   if (editingNew) toast('Now click any word to give it a chord');
 };
