@@ -106,6 +106,26 @@ body.show .bar,body.show #panel{display:none!important}
 .card.none{color:#8a9099;font-size:13px}
 .card.playing{outline:2px solid #ffc53d}
 body.show .ch{cursor:pointer}
+#playbar{flex:none;display:none;background:#14171c;border-top:2px solid #1f7a3a;padding:8px 10px 6px}
+body.playing #playbar{display:block}
+#bPlay.on,#fPlay.on{background:#1f7a3a!important;color:#fff!important}
+#pads{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.pad{position:relative;min-width:76px;height:64px;border-radius:10px;border:2px solid #333a44;background:#1d222a;color:#ffc53d;font-size:24px;font-weight:800;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;padding:14px 12px 0}
+.pad .k{position:absolute;top:4px;left:7px;font-size:12px;color:#8a9099;font-weight:700}
+.pad.on{background:#ffc53d;color:#111;border-color:#ffc53d}
+.pad.on .k{color:#5a4500}
+#pads .none{color:#8a9099;font-size:14px;padding:8px}
+#pctl{margin:2px 0}
+#pctl button{background:#2b3038;color:#eee;border:0;border-radius:7px;padding:7px 11px;font-size:14px;cursor:pointer}
+#pctl button.sel{background:#2f6fed;color:#fff}
+#pctl button.dng{background:#5a1f24}
+#pctl .lbl{font-size:11px;color:#8a9099;text-transform:uppercase;letter-spacing:.06em;margin-left:2px}
+#pctl .psep{width:1px;height:22px;background:#333;margin:0 4px}
+#pTempo{width:62px;background:#0f1115;border:1px solid #444;color:#eee;border-radius:7px;padding:6px;font-size:15px;text-align:center}
+#pVol{width:90px}
+#phint{font-size:12px;color:#7d848e;padding:2px 2px 0}
+#phint b{color:#bbb}
+body.show #phint{display:none}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#2f6fed;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:30}
 #toast.show{opacity:1}
 </style>
@@ -116,6 +136,7 @@ body.show .ch{cursor:pointer}
   <select id="songSel" title="Song"></select>
   <button id="bNext" title="Next song">▶</button>
   <button id="bShow" title="Full screen: hide all controls (S)">⛶ Show</button>
+  <button id="bPlay" title="Play the song's chords from your keyboard">🎹 Play</button>
   <button id="bNew">＋ New song</button>
   <button id="bText" title="Paste or edit the words">✎ Lyrics</button>
   <button id="bUndo" title="Undo (Ctrl+Z)">↶ Undo</button>
@@ -134,7 +155,7 @@ body.show .ch{cursor:pointer}
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v10</span>
+  <span class="lbl" title="App version">v11</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -167,7 +188,28 @@ body.show .ch{cursor:pointer}
 
 <div id="panel"></div>
 
-<div id="float"><button id="fPrev">◀</button><button id="fNext">▶</button><button id="fLegend">🎸 Chords</button><button id="fEdit">✎ Edit</button></div>
+<div id="playbar">
+  <div id="pads"></div>
+  <div class="prow" id="pctl">
+    <span class="lbl">Sound</span>
+    <button data-snd="guitar">Guitar</button><button data-snd="keys">Keys</button><button data-snd="organ">Organ</button>
+    <span class="psep"></span>
+    <button id="pSus" title="Let chords ring until the next one (or hold Shift)">Sustain: off</button>
+    <span class="psep"></span>
+    <span class="lbl">Repeat</span>
+    <button data-rep="off">Off</button><button data-rep="4">♩ Quarter</button><button data-rep="8">♪ Eighth</button><button data-rep="16">16th</button>
+    <span class="psep"></span>
+    <span class="lbl">Tempo</span>
+    <button id="pTd">−</button><input id="pTempo" type="number" min="40" max="240" inputmode="numeric"><button id="pTu">+</button><button id="pTap" title="Tap 4 times in time (or press Enter)">Tap</button>
+    <span class="psep"></span>
+    <span class="lbl">Vol</span><input id="pVol" type="range" min="0" max="1" step="0.05">
+    <span style="flex:1"></span>
+    <button id="pStop" class="dng">■ Stop</button><button id="pClose">✕ Close</button>
+  </div>
+  <div id="phint">Keys play the chords · <b>Space</b> stop · hold <b>Shift</b> = sustain pedal · <b>1 2 3 4</b> = repeat off / ♩ / ♪ / 16th · <b>Enter</b> = tap tempo</div>
+</div>
+
+<div id="float"><button id="fPrev">◀</button><button id="fNext">▶</button><button id="fLegend">🎸 Chords</button><button id="fPlay">🎹 Play</button><button id="fEdit">✎ Edit</button></div>
 
 <div id="ed">
   <div id="edBox">
@@ -471,7 +513,7 @@ function audio() {
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
     actx = new AC();
     const comp = actx.createDynamicsCompressor(); comp.connect(actx.destination);
-    master = actx.createGain(); master.gain.value = 0.9; master.connect(comp);
+    master = actx.createGain(); master.gain.value = settings.vol == null ? 0.8 : settings.vol; master.connect(comp);
   }
   if (actx.state === 'suspended') actx.resume();
   return actx;
@@ -479,17 +521,17 @@ function audio() {
 function pluck(midi) {
   if (pluckCache.has(midi)) return pluckCache.get(midi);
   const ctx = actx, sr = ctx.sampleRate, f = 440 * Math.pow(2, (midi - 69) / 12);
-  const len = Math.floor(sr * 2.4), buf = ctx.createBuffer(1, len, sr), y = buf.getChannelData(0);
+  const len = Math.floor(sr * 4), buf = ctx.createBuffer(1, len, sr), y = buf.getChannelData(0);
   const D = sr / f - 0.5, Di = Math.floor(D), fr = D - Di;
   let p = 0;
   for (let i = 0; i < Di + 3 && i < len; i++) { p = p * 0.45 + (Math.random() * 2 - 1) * 0.55; y[i] = p; }
-  const decay = f < 150 ? 0.997 : f < 300 ? 0.996 : 0.994;
+  const decay = f < 150 ? 0.998 : f < 300 ? 0.997 : 0.9955;
   for (let i = Di + 3; i < len; i++) {
     const a = y[i - Di] * (1 - fr) + y[i - Di - 1] * fr, b = y[i - Di - 1] * (1 - fr) + y[i - Di - 2] * fr;
     y[i] = decay * 0.5 * (a + b);
   }
   let peak = 0; for (let i = 0; i < len; i++) peak = Math.max(peak, Math.abs(y[i]));
-  const fade = Math.floor(sr * 0.3);
+  const fade = Math.floor(sr * 0.5);
   for (let i = 0; i < len; i++) { y[i] = y[i] / (peak || 1) * 0.5; if (i > len - fade) y[i] *= (len - i) / fade; }
   pluckCache.set(midi, buf);
   return buf;
@@ -501,14 +543,173 @@ function playChord(name) {
   const ctx = audio(); if (!ctx) return;
   const shape = shapeFor(name); if (!shape) return;
   const t0 = ctx.currentTime + 0.02;
+  const g = ctx.createGain(); g.gain.value = 0.32; g.connect(master);
+  const v = { g, srcs: [], start: t0, end: t0 + 4.5 };
   let j = 0;
   shape.forEach((fret, s) => {
     if (fret < 0) return;
     const src = ctx.createBufferSource(); src.buffer = pluck(TUNING[s] + fret);
-    const g = ctx.createGain(); g.gain.value = 0.32;
-    src.connect(g); g.connect(master); src.start(t0 + j++ * 0.032);
+    src.connect(g); src.start(t0 + j++ * 0.032); v.srcs.push(src);
   });
+  voices.push(v);
 }
+
+/* ================= play mode: chords on the computer keyboard ================= */
+const PKEYS = ['KeyA','KeyS','KeyD','KeyF','KeyG','KeyH','KeyJ','KeyK','KeyL','Semicolon','KeyQ','KeyW','KeyE','KeyR','KeyT','KeyY','KeyU','KeyI','KeyO','KeyP'];
+const keyLabel = c => c === 'Semicolon' ? ';' : c.replace('Key', '');
+let playOn = false, curPlay = null, pat = null, patTimer = null, shiftDown = false, voices = [], taps = [];
+const held = new Map();          // key code -> chord name
+const psettings = () => { settings.sound = settings.sound || 'guitar'; settings.rep = settings.rep || 'off'; if (settings.vol == null) settings.vol = 0.8; return settings; };
+const tempoNow = () => song().tempo || 100;
+const sustainOn = () => !!settings.sustain || shiftDown;
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+function keyVoicing(name) {      // piano / organ voicing: bass note + chord tones above middle C
+  const ch = parseChord(name); if (!ch) return [];
+  const tones = [...new Set(ch.pcs)].map(pc => 60 + pc).sort((a, b) => a - b);
+  return [48 + ch.bass, ...tones];
+}
+function choke(t, rel) {
+  const now = actx.currentTime;
+  voices = voices.filter(v => v.end > now);
+  voices.forEach(v => { if (v.start <= t + 0.001) { v.g.gain.setTargetAtTime(0, Math.max(t, v.start), rel); v.srcs.forEach(s => { try { s.stop(Math.max(t, v.start) + rel * 6); } catch (e) {} }); v.end = Math.min(v.end, t + rel * 6); } });
+}
+function playVoice(name, t, o) {
+  o = o || {};
+  const ctx = audio(); if (!ctx || !name || !isChord(name)) return;
+  const snd = psettings().sound, vel = o.vel == null ? 1 : o.vel;
+  const g = ctx.createGain(); g.connect(master);
+  const v = { g, srcs: [], start: t, end: t + 6 };
+  if (snd === 'guitar') {
+    const shape = shapeFor(name); if (!shape) return;
+    let order = shape.map((f, s) => [f, s]).filter(x => x[0] >= 0);
+    if (o.up) order = order.reverse().slice(0, 4);
+    const gap = o.tight ? 0.011 : 0.03;
+    g.gain.setValueAtTime(0.34 * vel, t);
+    order.forEach(([f, s], j) => { const src = ctx.createBufferSource(); src.buffer = pluck(TUNING[s] + f); src.connect(g); src.start(t + j * gap); v.srcs.push(src); });
+    if (o.gate) g.gain.setTargetAtTime(0, t + o.gate, 0.04);
+  } else {
+    const notes = keyVoicing(name), organ = snd === 'organ';
+    const lvl = (organ ? 0.11 : 0.16) * vel;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(lvl, t + (organ ? 0.02 : 0.005));
+    if (!organ) g.gain.setTargetAtTime(lvl * 0.25, t + 0.01, 0.35);       // piano-like fade while held
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = organ ? 2600 : 3200; lp.connect(g);
+    notes.forEach(m => {
+      const parts = organ ? [[1, 1, 'sine'], [2, 0.5, 'sine'], [3, 0.22, 'sine'], [4, 0.12, 'sine']] : [[1, 1, 'triangle'], [2, 0.35, 'sine'], [3, 0.12, 'sine']];
+      parts.forEach(([mul, amp, type]) => {
+        const osc = ctx.createOscillator(); osc.type = type; osc.frequency.value = mtof(m) * mul;
+        if (organ) osc.detune.value = (Math.random() - 0.5) * 6;
+        const og = ctx.createGain(); og.gain.value = amp; osc.connect(og); og.connect(lp); osc.start(t); v.srcs.push(osc);
+      });
+    });
+    if (o.gate) { g.gain.setTargetAtTime(0, t + o.gate, organ ? 0.03 : 0.05); v.srcs.forEach(s => s.stop(t + o.gate + 0.5)); v.end = t + o.gate + 0.5; }
+    else v.srcs.forEach(s => s.stop(t + 600));
+  }
+  voices.push(v);
+}
+function patTick() {
+  if (!pat || !actx) return;
+  const step = 60 / tempoNow() / ({ '4': 1, '8': 2, '16': 4 }[settings.rep] || 1);
+  while (pat.next < actx.currentTime + 0.12) {
+    const off = pat.i % 2 === 1 && settings.rep !== '4';
+    choke(pat.next, 0.015);
+    playVoice(pat.name, pat.next, { up: off, vel: off ? 0.7 : 1, gate: step * 0.85, tight: true });
+    pat.i++; pat.next += step;
+  }
+}
+function pressChord(name) {
+  const ctx = audio(); if (!ctx) return;
+  curPlay = name; paintPads();
+  const t = ctx.currentTime + 0.005;
+  if (psettings().rep !== 'off') {
+    pat = { name, next: t, i: 0 };
+    if (!patTimer) patTimer = setInterval(patTick, 25);
+    patTick();
+  } else { pat = null; choke(t, 0.03); playVoice(name, t); }
+}
+function releaseChord(name) {
+  if (name !== curPlay || sustainOn()) return;
+  if ([...held.values()].includes(name)) return;
+  stopPlay();
+}
+function stopPlay() {
+  pat = null;
+  if (actx) choke(actx.currentTime, 0.07);
+  curPlay = null; paintPads();
+}
+function padMap() { return songChords().slice(0, PKEYS.length).map((c, i) => ({ code: PKEYS[i], chord: c })); }
+function paintPads() { document.querySelectorAll('.pad').forEach(p => p.classList.toggle('on', p.dataset.chord === curPlay)); }
+function renderPads() {
+  if (!playOn) return;
+  const m = padMap();
+  $('#pads').innerHTML = m.length ? m.map(p => `<button class="pad" data-code="${p.code}" data-chord="${esc(p.chord)}"><span class="k">${keyLabel(p.code)}</span>${esc(p.chord)}</button>`).join('')
+    : '<div class="none">Add chords to this song and they will show up here as keys.</div>';
+  paintPads();
+  const s = psettings();
+  document.querySelectorAll('[data-snd]').forEach(b => b.classList.toggle('sel', b.dataset.snd === s.sound));
+  document.querySelectorAll('[data-rep]').forEach(b => b.classList.toggle('sel', b.dataset.rep === s.rep));
+  $('#pSus').textContent = 'Sustain: ' + (s.sustain ? 'ON' : 'off'); $('#pSus').classList.toggle('sel', !!s.sustain);
+  if (document.activeElement !== $('#pTempo')) $('#pTempo').value = tempoNow();
+  $('#pVol').value = s.vol;
+  if (master) master.gain.value = s.vol;
+}
+function setPlay(on) {
+  playOn = on;
+  document.body.classList.toggle('playing', on);
+  $('#bPlay').classList.toggle('on', on); $('#fPlay').classList.toggle('on', on);
+  if (on) { audio(); renderPads(); toast('Play mode: press ' + padMap().slice(0, 4).map(p => keyLabel(p.code)).join(' ') + '… to play the chords'); }
+  else { stopPlay(); held.clear(); }
+}
+function setTempo(v) { v = Math.max(40, Math.min(240, Math.round(v))); song().tempo = v; save(); $('#pTempo').value = v; }
+function tapTempo() {
+  const now = performance.now();
+  taps = taps.filter(x => now - x < 2500); taps.push(now);
+  if (taps.length >= 2) { const d = (taps[taps.length - 1] - taps[0]) / (taps.length - 1); setTempo(60000 / d); }
+  const b = $('#pTap'); b.classList.add('sel'); setTimeout(() => b.classList.remove('sel'), 120);
+}
+$('#bPlay').onclick = () => setPlay(!playOn);
+$('#fPlay').onclick = () => setPlay(!playOn);
+$('#pClose').onclick = () => setPlay(false);
+$('#pStop').onclick = stopPlay;
+$('#pSus').onclick = () => { settings.sustain = !settings.sustain; save(); renderPads(); if (!settings.sustain && curPlay && ![...held.values()].includes(curPlay)) stopPlay(); };
+$('#pTd').onclick = () => setTempo(tempoNow() - 2);
+$('#pTu').onclick = () => setTempo(tempoNow() + 2);
+$('#pTap').onclick = tapTempo;
+$('#pTempo').onchange = e => setTempo(+e.target.value || 100);
+$('#pVol').oninput = e => { settings.vol = +e.target.value; if (master) master.gain.value = settings.vol; save(); };
+$('#pctl').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.snd) { settings.sound = b.dataset.snd; save(); renderPads(); }
+  if (b.dataset.rep) { settings.rep = b.dataset.rep; save(); renderPads(); if (curPlay && pat == null && settings.rep !== 'off') pressChord(curPlay); }
+});
+// touch / mouse on the pads
+$('#pads').addEventListener('pointerdown', e => { const p = e.target.closest('.pad'); if (!p) return; e.preventDefault(); held.set('ptr' + e.pointerId, p.dataset.chord); pressChord(p.dataset.chord); });
+const padUp = e => { const k = 'ptr' + e.pointerId; if (!held.has(k)) return; const c = held.get(k); held.delete(k); releaseChord(c); };
+$('#pads').addEventListener('pointerup', padUp);
+$('#pads').addEventListener('pointercancel', padUp);
+$('#pads').addEventListener('pointerleave', padUp);
+// the computer keyboard
+document.addEventListener('keydown', e => {
+  if (!playOn || $('#ed').classList.contains('open') || $('#leg').classList.contains('open')) return;
+  if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && e.target.type !== 'range') return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === 'Shift') { shiftDown = true; return; }
+  const i = PKEYS.indexOf(e.code), m = padMap();
+  let handled = true;
+  if (i >= 0 && i < m.length) { if (!e.repeat) { held.set(e.code, m[i].chord); pressChord(m[i].chord); } }
+  else if (e.code === 'Space') { if (!e.repeat) stopPlay(); }
+  else if (e.code === 'Enter') { if (!e.repeat) tapTempo(); }
+  else if (['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code)) { settings.rep = ['off', '4', '8', '16'][+e.code.slice(5) - 1]; save(); renderPads(); if (curPlay && settings.rep !== 'off') pressChord(curPlay); }
+  else if (i >= 0) { }                               // unused chord key: swallow it so it doesn't trigger shortcuts
+  else handled = false;
+  if (handled) { e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+document.addEventListener('keyup', e => {
+  if (!playOn) return;
+  if (e.key === 'Shift') { shiftDown = false; if (curPlay && !settings.sustain && ![...held.values()].includes(curPlay)) stopPlay(); return; }
+  if (held.has(e.code)) { const c = held.get(e.code); held.delete(e.code); releaseChord(c); }
+}, true);
+window.addEventListener('blur', () => { held.clear(); shiftDown = false; if (playOn && !settings.sustain && settings.rep === 'off') stopPlay(); });
 
 /* ================= chord diagrams ================= */
 function diagramSVG(fr) {
@@ -723,6 +924,7 @@ function render() {
   document.body.classList.toggle('light', settings.theme === 'light');
   $('#bTheme').textContent = settings.theme === 'light' ? '☾ Dark' : '☀ Light';
   fit();
+  if (playOn) renderPads();
 }
 const fits = b => {
   if (b.scrollWidth > b.clientWidth + 2 || b.scrollHeight > b.clientHeight + 2) return false;
