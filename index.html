@@ -39,6 +39,9 @@ body.diag-on #diag{display:flex}
 .dgc{display:flex;flex-direction:column;align-items:center;cursor:pointer;min-width:0}
 .dgn{font-size:30px;font-weight:800;color:var(--chord);line-height:1.1}
 .dgc svg{display:block}
+.dgcyc{display:flex;align-items:center;gap:8px;height:30px;font-size:15px;color:var(--muted)}
+.dgcyc button{background:rgba(128,128,128,.22);color:var(--lyric);border:0;border-radius:7px;width:34px;height:26px;font-size:18px;line-height:1;cursor:pointer}
+body.show:not(.ctl) .dgcyc{visibility:hidden}
 #body{flex:1;min-height:0;overflow:hidden;display:flex;column-gap:1.6em;color:var(--lyric);align-items:flex-start}
 #body.measure{display:block}
 #body.measure .row{width:max-content}
@@ -214,7 +217,7 @@ body.show #phint{display:none}
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v18</span>
+  <span class="lbl" title="App version">v19</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -610,8 +613,15 @@ function pluck(midi) {
   pluckCache.set(midi, buf);
   return buf;
 }
-const shapePick = new Map();     // chord name -> which fingering is chosen
-const shapeFor = name => { const s = chordShapes(name); return s.length ? s[(shapePick.get(name) || 0) % s.length] : null; };
+// which fingering each chord uses: saved with the song (keyed by the chord as shown), so every device sees the same voicing
+const pickOf = name => { const s = typeof song === 'function' && song(); return (s && s.voicings && s.voicings[name]) || 0; };
+function stepVoicing(name, d) {
+  const n = chordShapes(name).length; if (n < 2) return;
+  const s = song(); s.voicings = Object.assign({}, s.voicings, { [name]: ((pickOf(name) + d) % n + n) % n });
+  if (!s.voicings[name]) delete s.voicings[name];
+  save();
+}
+const shapeFor = name => { const s = chordShapes(name); return s.length ? s[pickOf(name) % s.length] : null; };
 function playChord(name) {
   if (!name || !isChord(name)) return;
   const ctx = audio(); if (!ctx) return;
@@ -906,6 +916,10 @@ function pianoSVG(notes, C, lo, hi) {      // keyboard with the chord's keys mar
   });
   return s + '</svg>';
 }
+function cycHTML(c) {
+  const n = chordShapes(c).length;
+  return n > 1 ? `<div class="dgcyc"><button data-dcyc="-1">‹</button><span>${pickOf(c) % n + 1}/${n}</span><button data-dcyc="1">›</button></div>` : '<div class="dgcyc"></div>';
+}
 function renderDiag() {
   const mode = settings.diag || 'off', D = $('#diag');
   document.body.classList.toggle('diag-on', mode !== 'off');
@@ -917,15 +931,17 @@ function renderDiag() {
   const avail = 1808 - 18 * (list.length - 1);
   if (mode === 'guitar') {
     const w = Math.max(60, Math.min(130, avail / list.length)), h = w * 168 / 140;
-    D.innerHTML = list.map(c => `<div class="dgc" data-chord="${esc(c)}"><div class="dgn" style="font-size:${Math.min(30, w / 3.6)}px">${esc(c)}</div><div style="width:${w}px;height:${h}px">${diagramSVG(shapeFor(c), C).replace('<svg ', '<svg width="' + w + '" height="' + h + '" ')}</div></div>`).join('');
+    D.innerHTML = list.map(c => `<div class="dgc" data-chord="${esc(c)}"><div class="dgn" style="font-size:${Math.min(30, w / 3.6)}px">${esc(c)}</div><div style="width:${w}px;height:${h}px">${diagramSVG(shapeFor(c), C).replace('<svg ', '<svg width="' + w + '" height="' + h + '" ')}</div>${cycHTML(c)}</div>`).join('');
   } else {
     const all = list.map(keyVoicing), lo = Math.floor(Math.min(...all.flat()) / 12) * 12, hi = Math.ceil((Math.max(...all.flat()) + 1) / 12) * 12 - 1;
     let whites = 0; for (let m = lo; m <= hi; m++) if (![1, 3, 6, 8, 10].includes(m % 12)) whites++;
     const natW = whites * 16 + 2, w = Math.max(90, Math.min(natW * 1.1, avail / list.length)), h = w * 96 / natW;
-    D.innerHTML = list.map((c, i) => `<div class="dgc" data-chord="${esc(c)}"><div class="dgn" style="font-size:${Math.min(30, Math.max(16, w / 7))}px">${esc(c)}</div>${pianoSVG(all[i], C, lo, hi).replace('<svg ', '<svg width="' + w + '" height="' + h + '" ')}</div>`).join('');
+    D.innerHTML = list.map((c, i) => `<div class="dgc" data-chord="${esc(c)}"><div class="dgn" style="font-size:${Math.min(30, Math.max(16, w / 7))}px">${esc(c)}</div>${pianoSVG(all[i], C, lo, hi).replace('<svg ', '<svg width="' + w + '" height="' + h + '" ')}${cycHTML(c)}</div>`).join('');
   }
 }
-$('#diag').addEventListener('click', e => { const c = e.target.closest('.dgc'); if (!c) return; if (settings.diag === 'piano') { const a = audio(); if (a) { const sv = settings.sound; settings.sound = 'keys'; playVoice(c.dataset.chord, a.currentTime + 0.01, { gate: 1.6 }); settings.sound = sv; } } else playChord(c.dataset.chord); });
+$('#diag').addEventListener('click', e => { const c = e.target.closest('.dgc'); if (!c) return;
+  const cy = e.target.closest('[data-dcyc]');
+  if (cy) { e.stopPropagation(); stepVoicing(c.dataset.chord, +cy.dataset.dcyc); render(); flashFloat(document.body.classList.contains('show')); const n = $('#diag').querySelector(`.dgc[data-chord="${CSS.escape(c.dataset.chord)}"]`); if (n) n.click(); return; } if (settings.diag === 'piano') { const a = audio(); if (a) { const sv = settings.sound; settings.sound = 'keys'; playVoice(c.dataset.chord, a.currentTime + 0.01, { gate: 1.6 }); settings.sound = sv; } } else playChord(c.dataset.chord); });
 function songChords() {
   const s = song(), seen = [];
   s.lines.forEach(L => { if (L.k === 'line') L.toks.forEach(k => { const c = disp(s, k.c || ''); if (c && isChord(c) && !seen.includes(c)) seen.push(c); }); });
@@ -934,7 +950,7 @@ function songChords() {
 function cardHTML(name) {
   const shapes = chordShapes(name);
   if (!shapes.length) return `<div class="card none"><div class="nm">${esc(name)}</div>No diagram for this one</div>`;
-  const i = (shapePick.get(name) || 0) % shapes.length;
+  const i = pickOf(name) % shapes.length;
   if (settings.legInst === 'piano') return `<div class="card pno" data-chord="${esc(name)}"><div class="nm">${esc(name)}</div>${pianoSVG(keyVoicing(name))}
     <div class="cyc">${shapes.length > 1 ? `<button data-cyc="-1">‹</button><span>voicing ${i + 1} / ${shapes.length}</span><button data-cyc="1">›</button>` : '&nbsp;'}</div></div>`;
   return `<div class="card" data-chord="${esc(name)}"><div class="nm">${esc(name)}</div>${diagramSVG(shapes[i])}
@@ -962,7 +978,7 @@ $('#legInst').onclick = e => { const b = e.target.closest('[data-inst]'); if (!b
 $('#legGrid').addEventListener('click', e => {
   const card = e.target.closest('.card[data-chord]'); if (!card) return;
   const name = card.dataset.chord, cyc = e.target.closest('[data-cyc]');
-  if (cyc) { const n = chordShapes(name).length; shapePick.set(name, ((shapePick.get(name) || 0) + +cyc.dataset.cyc + n) % n); renderLegend(); renderDiag(); fit(); return; }
+  if (cyc) { stepVoicing(name, +cyc.dataset.cyc); renderLegend(); render(); return; }
   if (e.target.closest('svg') || e.target.closest('.nm')) { if (settings.legInst === 'piano') { const c = audio(); if (c) { const sv = settings.sound; settings.sound = 'keys'; playVoice(name, c.currentTime + 0.01, { gate: 1.6 }); settings.sound = sv; } } else playChord(name); card.classList.add('playing'); setTimeout(() => card.classList.remove('playing'), 400); }
 });
 
@@ -1036,6 +1052,7 @@ function norm(s) {
   if (s.tempo) o.tempo = s.tempo;
   if (s.beats) o.beats = s.beats;
   if (Array.isArray(s.palette) && s.palette.length) o.palette = s.palette;
+  if (s.voicings && Object.keys(s.voicings).length) o.voicings = s.voicings;
   return o;
 }
 function load() {
@@ -1539,8 +1556,8 @@ function setShow(on) {
 }
 function flashFloat(on) {
   const f = $('#float'); clearTimeout(flashFloat.h);
-  f.classList.toggle('on', !!on);
-  if (on) flashFloat.h = setTimeout(() => f.classList.remove('on'), 2500);
+  f.classList.toggle('on', !!on); document.body.classList.toggle('ctl', !!on);
+  if (on) flashFloat.h = setTimeout(() => { f.classList.remove('on'); document.body.classList.remove('ctl'); }, 3500);
 }
 $('#bShow').onclick = () => setShow(true);
 $('#fEdit').onclick = () => setShow(false);
