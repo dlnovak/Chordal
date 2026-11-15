@@ -158,7 +158,7 @@ body.show #phint{display:none}
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v12</span>
+  <span class="lbl" title="App version">v13</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -968,11 +968,11 @@ function fit() {
     b.classList.toggle('nowrap', !wrap);
     for (const c of opts) {
       b.style.columnCount = c;
-      let lo = 12, hi = 110;
+      let lo = 12, hi = 92;
       b.style.fontSize = hi + 'px';
       if (fits(b)) lo = hi;
       else for (let k = 0; k < 10; k++) { const m = (lo + hi) / 2; b.style.fontSize = m + 'px'; if (fits(b)) lo = m; else hi = m; }
-      const score = lo * (wrap ? 0.8 : 1) * (1 - 0.03 * (c - 1));
+      const score = lo * (wrap ? 0.62 : 1) * (1 - 0.03 * (c - 1));
       if (!best || score > best.score) best = { size: lo, cols: c, wrap, score };
     }
   }
