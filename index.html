@@ -34,6 +34,11 @@ body.cloud .cloudOnly{display:inline-block!important}
 #title{font-size:58px;font-weight:800;color:var(--lyric);line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #artist{font-size:34px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
 #key{font-size:36px;font-weight:700;color:var(--chord);white-space:nowrap}
+#diag{flex:none;display:none;justify-content:center;align-items:flex-end;gap:18px;border-top:2px solid var(--rule);padding-top:10px;margin-top:10px;overflow:hidden}
+body.diag-on #diag{display:flex}
+.dgc{display:flex;flex-direction:column;align-items:center;cursor:pointer;min-width:0}
+.dgn{font-size:30px;font-weight:800;color:var(--chord);line-height:1.1}
+.dgc svg{display:block}
 #body{flex:1;min-height:0;overflow:hidden;display:flex;column-gap:1.6em;color:var(--lyric);align-items:flex-start}
 #body.measure{display:block}
 #body.measure .row{width:max-content}
@@ -106,7 +111,10 @@ body.show .bar,body.show #panel{display:none!important}
 #legHead b{font-size:17px;margin-right:auto}
 #legHead input{background:#0b0c0f;border:1px solid #444;color:#ffd77a;font-weight:700;border-radius:8px;padding:8px 10px;width:230px;font-size:16px}
 #legHead button{background:#262a31;color:#eee;border:0;border-radius:8px;padding:8px 14px;font-size:15px;cursor:pointer}
-#legHint{font-size:13px;color:#8a9099;padding:6px 14px}
+#legHint{font-size:13px;color:#8a9099;padding:6px 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#legInst button{background:#262a31;color:#eee;border:0;border-radius:8px;padding:6px 12px;font-size:14px;cursor:pointer;margin-right:4px}
+#legInst button.sel{background:#2f6fed}
+.card.pno{grid-column:span 2}
 #legGrid{flex:1;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;padding:8px 14px 20px;align-content:start}
 .card{background:#1b1e24;border-radius:12px;padding:10px 6px 8px;text-align:center;color:#eee}
 .card .nm{font-size:22px;font-weight:800;color:#ffc53d;margin-bottom:2px}
@@ -118,6 +126,7 @@ body.show .bar,body.show #panel{display:none!important}
 body.show .ch{cursor:pointer}
 #playbar{flex:none;display:none;background:#14171c;border-top:2px solid #1f7a3a;padding:8px 10px 6px}
 body.playing #playbar{display:block}
+#bDiag.on{background:#3a3220!important;color:#ffd77a!important}
 #bPlay.on,#fPlay.on{background:#1f7a3a!important;color:#fff!important}
 #pads{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px}
 .pad{position:relative;min-width:76px;height:64px;border-radius:10px;border:2px solid #333a44;background:#1d222a;color:#ffc53d;font-size:24px;font-weight:800;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;padding:14px 12px 0}
@@ -199,12 +208,13 @@ body.show #phint{display:none}
   <button id="bTheme">☀ Light</button>
   <span class="sep"></span>
   <button id="bLegend" title="Fingerings for the chords in this song">🎸 Chords</button>
+  <button id="bDiag" title="Show chord diagrams along the bottom of the chart: off / guitar / piano">▦ Diagrams: off</button>
   <button id="bImg" title="Save this chart as a picture">🖼 Export image</button>
   <button id="bExport" title="Download a backup of all songs (songs.json)">⬇ Backup</button>
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v17</span>
+  <span class="lbl" title="App version">v18</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -232,6 +242,7 @@ body.show #phint{display:none}
   <div id="stage">
     <div id="hdr"><div id="title"></div><div id="artist"></div><div id="key"></div></div>
     <div id="body"></div>
+    <div id="diag"></div>
   </div>
 </div>
 
@@ -264,7 +275,7 @@ body.show #phint{display:none}
   <div id="phint">Keys play the chords · <b>Space</b> or <b>Esc</b> stop · hold <b>Shift</b> = sustain pedal · <b>1 2 3 4</b> = repeat off / ♩ / ♪ / 16th · <b>Enter</b> = tap tempo · <b>M</b> = metronome</div>
 </div>
 
-<div id="float"><button id="fPrev">◀</button><button id="fNext">▶</button><button id="fLegend">🎸 Chords</button><button id="fPlay">🎹 Play</button><button id="fEdit">✎ Edit</button></div>
+<div id="float"><button id="fPrev">◀</button><button id="fNext">▶</button><button id="fLegend">🎸 Chords</button><button id="fDiag">▦ Diagrams</button><button id="fPlay">🎹 Play</button><button id="fEdit">✎ Edit</button></div>
 
 <div id="ed">
   <div id="edBox">
@@ -292,7 +303,7 @@ body.show #phint{display:none}
     <input id="legFind" placeholder="Look up any chord, e.g. F#m7" autocomplete="off" autocapitalize="characters" spellcheck="false">
     <button id="legClose">✕ Close</button>
   </div>
-  <div id="legHint">Tap a diagram to hear it. Use ‹ › for other ways to play it.</div>
+  <div id="legHint"><span id="legInst"><button data-inst="guitar">🎸 Guitar</button><button data-inst="piano">🎹 Piano</button></span> Tap a diagram to hear it. Use ‹ › for other ways to play it. On piano, the blue note is your left hand.</div>
   <div id="legGrid"></div>
 </div>
 <div id="lib">
@@ -627,10 +638,14 @@ const psettings = () => { settings.sound = settings.sound || 'guitar'; settings.
 const tempoNow = () => song().tempo || 100;
 const sustainOn = () => !!settings.sustain || shiftDown;
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
-function keyVoicing(name) {      // piano / organ voicing: bass note + chord tones above middle C
-  const ch = parseChord(name); if (!ch) return [];
-  const tones = [...new Set(ch.pcs)].map(pc => 60 + pc).sort((a, b) => a - b);
-  return [48 + ch.bass, ...tones];
+function keyVoicing(name) {      // piano / organ voicing that sits where the guitar chord sits:
+  const ch = parseChord(name); if (!ch) return [];   // left hand = the guitar's lowest note, right hand = chord tones an octave above it
+  const shape = shapeFor(name);
+  let bass = 48 + ch.bass;
+  if (shape) { const ns = shape.map((f, s) => f >= 0 ? TUNING[s] + f : 99).filter(m => m < 99); if (ns.length) bass = Math.min(...ns); }
+  const start = bass + 12;
+  const rh = [...new Set(ch.pcs)].map(pc => start + ((pc - start % 12) + 12) % 12).sort((a, b) => a - b);
+  return [bass, ...rh];
 }
 function choke(t, rel) {
   const now = actx.currentTime;
@@ -845,27 +860,72 @@ document.addEventListener('keyup', e => {
 window.addEventListener('blur', () => { held.clear(); shiftDown = false; if (playOn && !settings.sustain && settings.rep === 'off') stopPlay(); });
 
 /* ================= chord diagrams ================= */
-function diagramSVG(fr) {
+function dgColors(light) {
+  return light ? { grid: '#777', str: '#444', nut: '#222', dot: '#c2410c', open: '#333', mute: '#c0392b', txt: '#666', wk: '#fff', wkS: '#666', bk: '#222', lh: '#1d4ed8' }
+               : { grid: '#666', str: '#aaa', nut: '#ddd', dot: '#ffc53d', open: '#ddd', mute: '#ff6b6b', txt: '#9aa0a8', wk: '#f2f2f2', wkS: '#555', bk: '#1b1b1b', lh: '#5cc8ff' };
+}
+function diagramSVG(fr, C) {
   if (!fr) return '';
+  C = C || dgColors(false);
   const fretted = fr.filter(f => f > 0), hi = fretted.length ? Math.max(...fretted) : 0, lo = fretted.length ? Math.min(...fretted) : 0;
   const base = hi <= 4 ? 1 : lo, X = i => 22 + i * 18, Y = f => 34 + f * 24;
   let s = `<svg viewBox="0 0 140 168" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">`;
-  s += base === 1 ? `<rect x="${X(0) - 1}" y="${Y(0) - 5}" width="${X(5) - X(0) + 2}" height="6" fill="#ddd"/>` : `<text x="${X(5) + 8}" y="${Y(0) + 17}" fill="#9aa0a8" font-size="13">${base}fr</text>`;
-  for (let f = 0; f <= 5; f++) s += `<line x1="${X(0)}" x2="${X(5)}" y1="${Y(f)}" y2="${Y(f)}" stroke="#666" stroke-width="1.5"/>`;
-  for (let i = 0; i < 6; i++) s += `<line x1="${X(i)}" x2="${X(i)}" y1="${Y(0)}" y2="${Y(5)}" stroke="#aaa" stroke-width="${1.2 + (5 - i) * 0.25}"/>`;
+  s += base === 1 ? `<rect x="${X(0) - 1}" y="${Y(0) - 5}" width="${X(5) - X(0) + 2}" height="6" fill="${C.nut}"/>` : `<text x="${X(5) + 8}" y="${Y(0) + 17}" fill="${C.txt}" font-size="13">${base}fr</text>`;
+  for (let f = 0; f <= 5; f++) s += `<line x1="${X(0)}" x2="${X(5)}" y1="${Y(f)}" y2="${Y(f)}" stroke="${C.grid}" stroke-width="1.5"/>`;
+  for (let i = 0; i < 6; i++) s += `<line x1="${X(i)}" x2="${X(i)}" y1="${Y(0)}" y2="${Y(5)}" stroke="${C.str}" stroke-width="${1.2 + (5 - i) * 0.25}"/>`;
   const fg = fingersNeeded(fr);
   if (fg.barre) {
     let last = fg.barre.from; fr.forEach((f, i) => { if (f === fg.barre.fret) last = i; });
     const y = Y(fg.barre.fret - base + 0.5);
-    s += `<rect x="${X(fg.barre.from) - 8}" y="${y - 8}" width="${X(last) - X(fg.barre.from) + 16}" height="16" rx="8" fill="#ffc53d"/>`;
+    s += `<rect x="${X(fg.barre.from) - 8}" y="${y - 8}" width="${X(last) - X(fg.barre.from) + 16}" height="16" rx="8" fill="${C.dot}"/>`;
   }
   fr.forEach((f, i) => {
-    if (f < 0) s += `<text x="${X(i)}" y="${Y(0) - 11}" fill="#ff6b6b" font-size="15" text-anchor="middle" font-weight="700">×</text>`;
-    else if (f === 0) s += `<circle cx="${X(i)}" cy="${Y(0) - 16}" r="5" fill="none" stroke="#ddd" stroke-width="1.8"/>`;
-    else if (!(fg.barre && f === fg.barre.fret)) s += `<circle cx="${X(i)}" cy="${Y(f - base + 0.5)}" r="8" fill="#ffc53d"/>`;
+    if (f < 0) s += `<text x="${X(i)}" y="${Y(0) - 11}" fill="${C.mute}" font-size="15" text-anchor="middle" font-weight="700">×</text>`;
+    else if (f === 0) s += `<circle cx="${X(i)}" cy="${Y(0) - 16}" r="5" fill="none" stroke="${C.open}" stroke-width="1.8"/>`;
+    else if (!(fg.barre && f === fg.barre.fret)) s += `<circle cx="${X(i)}" cy="${Y(f - base + 0.5)}" r="8" fill="${C.dot}"/>`;
   });
   return s + '</svg>';
 }
+const NOTE_NAMES = ['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+function pianoSVG(notes, C, lo, hi) {      // keyboard with the chord's keys marked; left-hand bass in blue
+  if (!notes || !notes.length) return '';
+  C = C || dgColors(false);
+  lo = lo != null ? lo : Math.floor(Math.min(...notes) / 12) * 12;
+  hi = hi != null ? hi : Math.ceil((Math.max(...notes) + 1) / 12) * 12 - 1;
+  const isBlack = m => [1, 3, 6, 8, 10].includes(m % 12);
+  const whites = []; for (let m = lo; m <= hi; m++) if (!isBlack(m)) whites.push(m);
+  const W = 16, H = 70, BW = 10, BH = 44, top = 4, width = whites.length * W + 2;
+  const xOf = m => { const wi = whites.findIndex(w => w > m); return (wi < 0 ? whites.length : wi) * W + 1; };
+  let s = `<svg viewBox="0 0 ${width} ${H + 26}" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,sans-serif">`;
+  whites.forEach((m, i) => { s += `<rect x="${i * W + 1}" y="${top}" width="${W}" height="${H}" fill="${C.wk}" stroke="${C.wkS}" stroke-width="1"/>`; });
+  for (let m = lo; m <= hi; m++) if (isBlack(m)) s += `<rect x="${xOf(m) - BW / 2}" y="${top}" width="${BW}" height="${BH}" fill="${C.bk}" rx="1.5"/>`;
+  notes.forEach((m, j) => {
+    const black = isBlack(m), x = black ? xOf(m) : whites.indexOf(m) * W + 1 + W / 2, y = top + (black ? BH - 9 : H - 11);
+    s += `<circle cx="${x}" cy="${y}" r="${black ? 4.5 : 6}" fill="${j === 0 ? C.lh : C.dot}" stroke="#000" stroke-width="${black ? 0 : 0.8}"/>`;
+    s += `<text x="${x}" y="${H + top + 16}" fill="${j === 0 ? C.lh : C.txt}" font-size="11" text-anchor="middle" font-weight="700">${NOTE_NAMES[m % 12]}</text>`;
+  });
+  return s + '</svg>';
+}
+function renderDiag() {
+  const mode = settings.diag || 'off', D = $('#diag');
+  document.body.classList.toggle('diag-on', mode !== 'off');
+  $('#bDiag').textContent = '▦ Diagrams: ' + ({ off: 'off', guitar: 'Guitar', piano: 'Piano' }[mode]);
+  $('#bDiag').classList.toggle('on', mode !== 'off');
+  if (mode === 'off') { D.innerHTML = ''; return; }
+  const list = songPalette(song()).filter(isChord), C = dgColors(settings.theme === 'light');
+  if (!list.length) { D.innerHTML = '<div class="dgn" style="font-size:22px;opacity:.6">No chords yet</div>'; return; }
+  const avail = 1808 - 18 * (list.length - 1);
+  if (mode === 'guitar') {
+    const w = Math.max(60, Math.min(130, avail / list.length)), h = w * 168 / 140;
+    D.innerHTML = list.map(c => `<div class="dgc" data-chord="${esc(c)}"><div class="dgn" style="font-size:${Math.min(30, w / 3.6)}px">${esc(c)}</div><div style="width:${w}px;height:${h}px">${diagramSVG(shapeFor(c), C).replace('<svg ', '<svg width="' + w + '" height="' + h + '" ')}</div></div>`).join('');
+  } else {
+    const all = list.map(keyVoicing), lo = Math.floor(Math.min(...all.flat()) / 12) * 12, hi = Math.ceil((Math.max(...all.flat()) + 1) / 12) * 12 - 1;
+    let whites = 0; for (let m = lo; m <= hi; m++) if (![1, 3, 6, 8, 10].includes(m % 12)) whites++;
+    const natW = whites * 16 + 2, w = Math.max(90, Math.min(natW * 1.1, avail / list.length)), h = w * 96 / natW;
+    D.innerHTML = list.map((c, i) => `<div class="dgc" data-chord="${esc(c)}"><div class="dgn" style="font-size:${Math.min(30, Math.max(16, w / 7))}px">${esc(c)}</div>${pianoSVG(all[i], C, lo, hi).replace('<svg ', '<svg width="' + w + '" height="' + h + '" ')}</div>`).join('');
+  }
+}
+$('#diag').addEventListener('click', e => { const c = e.target.closest('.dgc'); if (!c) return; if (settings.diag === 'piano') { const a = audio(); if (a) { const sv = settings.sound; settings.sound = 'keys'; playVoice(c.dataset.chord, a.currentTime + 0.01, { gate: 1.6 }); settings.sound = sv; } } else playChord(c.dataset.chord); });
 function songChords() {
   const s = song(), seen = [];
   s.lines.forEach(L => { if (L.k === 'line') L.toks.forEach(k => { const c = disp(s, k.c || ''); if (c && isChord(c) && !seen.includes(c)) seen.push(c); }); });
@@ -875,6 +935,8 @@ function cardHTML(name) {
   const shapes = chordShapes(name);
   if (!shapes.length) return `<div class="card none"><div class="nm">${esc(name)}</div>No diagram for this one</div>`;
   const i = (shapePick.get(name) || 0) % shapes.length;
+  if (settings.legInst === 'piano') return `<div class="card pno" data-chord="${esc(name)}"><div class="nm">${esc(name)}</div>${pianoSVG(keyVoicing(name))}
+    <div class="cyc">${shapes.length > 1 ? `<button data-cyc="-1">‹</button><span>voicing ${i + 1} / ${shapes.length}</span><button data-cyc="1">›</button>` : '&nbsp;'}</div></div>`;
   return `<div class="card" data-chord="${esc(name)}"><div class="nm">${esc(name)}</div>${diagramSVG(shapes[i])}
     <div class="cyc">${shapes.length > 1 ? `<button data-cyc="-1">‹</button><span>${i + 1} / ${shapes.length}</span><button data-cyc="1">›</button>` : '&nbsp;'}</div></div>`;
 }
@@ -886,17 +948,22 @@ function renderLegend() {
   html += list.map(cardHTML).join('');
   if (!html) html = '<div class="card none" style="grid-column:1/-1">No chords in this song yet. Click words on the chart to add some.</div>';
   $('#legGrid').innerHTML = html;
+  document.querySelectorAll('#legInst button').forEach(b => b.classList.toggle('sel', b.dataset.inst === (settings.legInst || 'guitar')));
 }
 function openLegend() { setSel(null); $('#legFind').value = ''; renderLegend(); $('#leg').classList.add('open'); }
 $('#bLegend').onclick = openLegend;
+const cycleDiag = () => { const o = ['off', 'guitar', 'piano']; settings.diag = o[(o.indexOf(settings.diag || 'off') + 1) % 3]; save(); render(); };
+$('#bDiag').onclick = cycleDiag;
+$('#fDiag').onclick = () => { cycleDiag(); flashFloat(true); };
 $('#fLegend').onclick = openLegend;
 $('#legClose').onclick = () => $('#leg').classList.remove('open');
 $('#legFind').oninput = renderLegend;
+$('#legInst').onclick = e => { const b = e.target.closest('[data-inst]'); if (!b) return; settings.legInst = b.dataset.inst; save(); renderLegend(); };
 $('#legGrid').addEventListener('click', e => {
   const card = e.target.closest('.card[data-chord]'); if (!card) return;
   const name = card.dataset.chord, cyc = e.target.closest('[data-cyc]');
-  if (cyc) { const n = chordShapes(name).length; shapePick.set(name, ((shapePick.get(name) || 0) + +cyc.dataset.cyc + n) % n); renderLegend(); playChord(name); return; }
-  if (e.target.closest('svg') || e.target.closest('.nm')) { playChord(name); card.classList.add('playing'); setTimeout(() => card.classList.remove('playing'), 400); }
+  if (cyc) { const n = chordShapes(name).length; shapePick.set(name, ((shapePick.get(name) || 0) + +cyc.dataset.cyc + n) % n); renderLegend(); renderDiag(); fit(); return; }
+  if (e.target.closest('svg') || e.target.closest('.nm')) { if (settings.legInst === 'piano') { const c = audio(); if (c) { const sv = settings.sound; settings.sound = 'keys'; playVoice(name, c.currentTime + 0.01, { gate: 1.6 }); settings.sound = sv; } } else playChord(name); card.classList.add('playing'); setTimeout(() => card.classList.remove('playing'), 400); }
 });
 
 /* ================= export the chart as a picture ================= */
@@ -905,11 +972,12 @@ async function exportImage() {
   const wasShow = document.body.classList.contains('show');
   document.body.classList.add('show');          // hides the edit marks
   fit();
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   const st = $('#stage'), sr = st.getBoundingClientRect(), k = sr.width / 1920, S = 2;
   const cv = document.createElement('canvas'); cv.width = 1920 * S; cv.height = 1080 * S;
   const ctx = cv.getContext('2d'); ctx.scale(S, S);
   ctx.fillStyle = getComputedStyle(st).backgroundColor; ctx.fillRect(0, 0, 1920, 1080);
-  const box = el => { const r = el.getBoundingClientRect(); return { x: (r.left - sr.left) / k, y: (r.top - sr.top) / k, w: r.width / k, h: r.height / k }; };
+  const box = el => { const S0 = st.getBoundingClientRect(), kk = S0.width / 1920, r = el.getBoundingClientRect(); return { x: (r.left - S0.left) / kk, y: (r.top - S0.top) / kk, w: r.width / kk, h: r.height / kk }; };
   const hdr = $('#hdr'), hb = box(hdr), hcs = getComputedStyle(hdr), bw = parseFloat(hcs.borderBottomWidth) || 0;
   ctx.fillStyle = hcs.borderBottomColor; ctx.fillRect(hb.x, hb.y + hb.h - bw, hb.w, bw);
   let maxX = 0;
@@ -937,6 +1005,13 @@ async function exportImage() {
   const body = $('#body'), F = parseFloat(body.style.fontSize) || 40;
   ctx.fillStyle = getComputedStyle(st).getPropertyValue('--rule').trim() || 'rgba(255,255,255,.14)';
   [...body.querySelectorAll('.col')].slice(1).forEach(c => { const cb = box(c); ctx.fillRect(cb.x - 0.8 * F - 1, cb.y, 2, cb.h); });
+  for (const svg of document.querySelectorAll('#diag svg')) {
+    const bx = box(svg), xml = svg.outerHTML;
+    await new Promise(res => { const im = new Image(); im.onload = () => { ctx.drawImage(im, bx.x, bx.y, bx.w, bx.h); res(); }; im.onerror = res; im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml); });
+  }
+  document.querySelectorAll('#diag .dgn').forEach(el => draw(el));
+  const dg = $('#diag');
+  if (getComputedStyle(dg).display !== 'none') { const db = box(dg); ctx.fillStyle = getComputedStyle(st).getPropertyValue('--rule').trim(); ctx.fillRect(db.x, db.y, db.w, 2); }
   if (!wasShow) { document.body.classList.remove('show'); fit(); }
   const blob = await new Promise(r => cv.toBlob(r, 'image/png'));
   const name = ((song().title || 'song').replace(/[^\w\- ]+/g, '').trim() || 'song') + '.png';
@@ -1057,6 +1132,7 @@ function render() {
   $('#songSel').value = s.id;
   document.body.classList.toggle('light', settings.theme === 'light');
   $('#bTheme').textContent = settings.theme === 'light' ? '☾ Dark' : '☀ Light';
+  renderDiag();
   fit();
   if (playOn) renderPads();
 }
