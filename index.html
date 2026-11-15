@@ -28,6 +28,13 @@ body.st-bars .blk{box-shadow:inset .18em 0 0 0 var(--secc)}
 body.st-boxes .row.sec .sh,body.st-bars .row.sec .sh,body.st-cards .row.sec .sh,body.st-chorus .row.s-chorus .sh{color:var(--secc)}
 body.ch-badge .ch:not(:empty){align-self:flex-start;background:var(--chord);color:var(--stage);border-radius:.22em;padding:0 .22em;margin-right:.18em;margin-bottom:.19em;font-size:.8em;min-height:auto;height:fit-content}
 body.tx-bold .ly{font-weight:650}
+body{--cs:88%;--cl:64%}
+body.light,body.th-sepia{--cs:78%;--cl:36%}
+body.th-contrast{--cs:100%;--cl:62%}
+body.ch-color .rc{--chord:hsl(var(--h,45),var(--cs),var(--cl))}
+body.ch-color .pad.rc{color:hsl(var(--h,45),88%,64%)}
+body.ch-color .pad.rc.on{background:hsl(var(--h,45),88%,60%);border-color:hsl(var(--h,45),88%,60%);color:#111}
+
 body.ft-serif #stage{font-family:Georgia,"Iowan Old Style","Palatino Linotype","Times New Roman",serif}
 body.ft-rounded #stage{font-family:ui-rounded,"SF Pro Rounded","Arial Rounded MT Bold","Varela Round","Trebuchet MS",sans-serif}
 body.ft-condensed #stage{font-family:"Avenir Next Condensed","Roboto Condensed","Arial Narrow","Helvetica Neue",sans-serif;font-stretch:condensed}
@@ -266,7 +273,7 @@ body.show #phint{display:none}
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v22</span>
+  <span class="lbl" title="App version">v23</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -841,7 +848,7 @@ function paintPads() { document.querySelectorAll('.pad').forEach(p => { const on
 function renderPads() {
   if (!playOn) return;
   const m = padMap();
-  $('#pads').innerHTML = m.length ? m.map(p => `<button class="pad" data-code="${p.code}" data-chord="${esc(p.chord)}"><span class="k">${keyLabel(p.code)}</span>${esc(p.chord)}<span class="ring"></span></button>`).join('')
+  $('#pads').innerHTML = m.length ? m.map(p => `<button class="pad rc" data-code="${p.code}" data-chord="${esc(p.chord)}"${hueAttr(p.chord)}><span class="k">${keyLabel(p.code)}</span>${esc(p.chord)}<span class="ring"></span></button>`).join('')
     : '<div class="none">Add chords to this song and they will show up here as keys.</div>';
   paintPads();
   const s = psettings();
@@ -1014,12 +1021,12 @@ function renderDiag() {
   const avail = 1808 - 18 * (list.length - 1);
   if (mode === 'guitar') {
     const w = Math.max(60, Math.min(130, avail / list.length)), h = w * 168 / 140;
-    D.innerHTML = list.map(c => `<div class="dgc" data-chord="${esc(c)}"><div class="dgn" style="font-size:${Math.min(30, w / 3.6)}px">${esc(c)}</div><div style="width:${w}px;height:${h}px">${diagramSVG(shapeFor(c), C).replace('<svg ', '<svg width="' + w + '" height="' + h + '" ')}</div>${cycHTML(c)}</div>`).join('');
+    D.innerHTML = list.map(c => `<div class="dgc" data-chord="${esc(c)}"><div class="dgn rc" style="--h:${rootHue(c) ?? 45};font-size:${Math.min(30, w / 3.6)}px">${esc(c)}</div><div style="width:${w}px;height:${h}px">${diagramSVG(shapeFor(c), C).replace('<svg ', '<svg width="' + w + '" height="' + h + '" ')}</div>${cycHTML(c)}</div>`).join('');
   } else {
     const all = list.map(keyVoicing), lo = Math.floor(Math.min(...all.flat()) / 12) * 12, hi = Math.ceil((Math.max(...all.flat()) + 1) / 12) * 12 - 1;
     let whites = 0; for (let m = lo; m <= hi; m++) if (![1, 3, 6, 8, 10].includes(m % 12)) whites++;
     const natW = whites * 16 + 2, w = Math.max(90, Math.min(natW * 1.1, avail / list.length)), h = w * 96 / natW;
-    D.innerHTML = list.map((c, i) => `<div class="dgc" data-chord="${esc(c)}"><div class="dgn" style="font-size:${Math.min(30, Math.max(16, w / 7))}px">${esc(c)}</div>${pianoSVG(all[i], C, lo, hi).replace('<svg ', '<svg width="' + w + '" height="' + h + '" ')}${cycHTML(c)}</div>`).join('');
+    D.innerHTML = list.map((c, i) => `<div class="dgc" data-chord="${esc(c)}"><div class="dgn rc" style="--h:${rootHue(c) ?? 45};font-size:${Math.min(30, Math.max(16, w / 7))}px">${esc(c)}</div>${pianoSVG(all[i], C, lo, hi).replace('<svg ', '<svg width="' + w + '" height="' + h + '" ')}${cycHTML(c)}</div>`).join('');
   }
 }
 $('#diag').addEventListener('click', e => { const c = e.target.closest('.dgc'); if (!c) return;
@@ -1215,6 +1222,9 @@ const store = (s, c) => tChord(c, -(s.transpose | 0), preferFlat(songKeyGuess(s)
 
 /* ================= render ================= */
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const ROOT_HUE = [45, 200, 330, 130, 22, 272, 172, 0, 92, 238, 300, 186];   // by position on the circle of fifths
+function rootHue(name) { const m = String(name || '').match(/^\(?([A-G][#b♯♭]?)/); if (!m) return null; const pc = IDX[m[1].replace('♯', '#').replace('♭', 'b')]; return pc == null ? null : ROOT_HUE[(pc * 7) % 12]; }
+const hueAttr = name => { const h = rootHue(name); return h == null ? '' : ` style="--h:${h}"`; };
 function lineHTML(L, l, s) {
   const toks = L.toks;
   const hasC = toks.some(k => k.c), hasT = toks.some(k => k.t);
@@ -1224,7 +1234,7 @@ function lineHTML(L, l, s) {
     const nx = toks[i + 1];
     const ly = (k.t || ' ') + (k.t && nx && !nx.g ? ' ' : '');
     const isSel = sel && sel.l === l && sel.i === i;
-    html += `<span class="p${isSel ? ' sel' : ''}" data-l="${l}" data-i="${i}"><span class="ch">${esc(disp(s, k.c || ''))}</span><span class="ly">${esc(ly)}</span></span>`;
+    html += `<span class="p${isSel ? ' sel' : ''}" data-l="${l}" data-i="${i}"><span class="ch rc"${hueAttr(disp(s, k.c || ''))}>${esc(disp(s, k.c || ''))}</span><span class="ly">${esc(ly)}</span></span>`;
   });
   if (open) html += '</span>';
   html += `<span class="add" data-l="${l}"><b data-add="${l}">＋</b></span>`;
@@ -1729,6 +1739,7 @@ function applyStyle() {
   if (th !== 'dark' && th !== 'light') B.classList.add('th-' + th);
   B.classList.add('st-' + (settings.secStyle || 'plain'));
   B.classList.toggle('ch-badge', !!settings.badges);
+  B.classList.toggle('ch-color', !!settings.chColor);
   B.classList.toggle('tx-bold', !!settings.bold);
   [...B.classList].filter(c => /^ft-/.test(c)).forEach(c => B.classList.remove(c));
   if (settings.font && settings.font !== 'sans') B.classList.add('ft-' + settings.font);
@@ -1741,6 +1752,7 @@ function renderStyleBox() {
     <h4>Colors</h4><div class="opts">${THEMES.map(([id, nm, bg, fg, ch]) => `<button class="sw${th === id ? ' sel' : ''}" data-th="${id}"><i style="background:${bg};color:${fg}"><span style="color:${ch}">C</span>&nbsp;Aa</i>${nm}</button>`).join('')}</div>
     <h4>Sections</h4><div class="opts">${SECSTYLES.map(([id, nm]) => `<button class="${ss === id ? 'sel' : ''}" data-ss="${id}">${nm}</button>`).join('')}</div>
     <h4>Chords</h4><div class="opts"><button class="${!settings.badges ? 'sel' : ''}" data-bd="0">Plain letters</button><button class="${settings.badges ? 'sel' : ''}" data-bd="1">Badges (solid boxes)</button></div>
+    <h4>Chord colors</h4><div class="opts"><button class="${!settings.chColor ? 'sel' : ''}" data-cc="0">One color</button><button class="${settings.chColor ? 'sel' : ''}" data-cc="1">${['C', 'G', 'D', 'A', 'E', 'F', 'Bb'].map(c => `<b style="color:hsl(${rootHue(c)},88%,64%)">${c}</b>`).join(' ')}&nbsp; Color by chord</button></div>
     <h4>Lyrics</h4><div class="opts"><button class="${!settings.bold ? 'sel' : ''}" data-bo="0">Regular</button><button class="${settings.bold ? 'sel' : ''}" data-bo="1">Bold</button></div>
     <h4>Font</h4><div class="opts">${[['sans', 'Clean', 'system-ui,sans-serif'], ['condensed', 'Condensed (fits bigger)', '"Avenir Next Condensed","Roboto Condensed","Arial Narrow",sans-serif'], ['serif', 'Songbook serif', 'Georgia,serif'], ['rounded', 'Rounded', 'ui-rounded,"Arial Rounded MT Bold","Trebuchet MS",sans-serif'], ['mono', 'Typewriter', 'ui-monospace,Menlo,monospace']]
       .map(([id, nm, ff]) => `<button class="${(settings.font || 'sans') === id ? 'sel' : ''}" data-ft="${id}" style="font-family:${ff.replace(/"/g, '&quot;')}">${nm}</button>`).join('')}</div>
@@ -1755,6 +1767,7 @@ $('#stylePop').addEventListener('click', e => {
   if (b.dataset.bd) settings.badges = b.dataset.bd === '1';
   if (b.dataset.bo) settings.bold = b.dataset.bo === '1';
   if (b.dataset.ft) settings.font = b.dataset.ft;
+  if (b.dataset.cc) settings.chColor = b.dataset.cc === '1';
   save(); render(); renderStyleBox();
 });
 
