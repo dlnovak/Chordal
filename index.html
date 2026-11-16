@@ -262,6 +262,7 @@ body.light #scrTop,body.th-sepia #scrTop{background:rgba(0,0,0,.06)}
 #scrDoc.shrink .ln{flex-wrap:nowrap}
 #scrDoc .add,#scrDoc .empty{display:none}
 #scrDoc .gap{outline:none!important}
+#scrDoc .repl .sh::after{content:' ↻';opacity:.75}
 #scrDoc .ln,#scrDoc .g{align-items:flex-end}
 #scrDoc .ch{min-height:0}
 #scrDoc .noch .ch{display:none}
@@ -331,7 +332,7 @@ body.light #scrBar,body.th-sepia #scrBar{background:rgba(0,0,0,.06)}
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v24</span>
+  <span class="lbl" title="App version">v25</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -1328,12 +1329,39 @@ function render() {
   if (playOn) renderPads();
   if (typeof SCR !== 'undefined' && SCR.open) scrBuild();
 }
-function songRowsHTML(s) {
+/* For the scroll view: a label with nothing under it ("CHORUS", "Repeat Chorus", "Chorus x2") gets the
+   matching section written out again under it, since you can't glance back up while it scrolls. */
+const secKey = t => String(t).toLowerCase().replace(/\(.*?\)/g, ' ').replace(/\b(repeat|again|reprise|last|final|one more time|twice|to end|out)\b/g, ' ')
+  .replace(/[x×]\s*\d+|\d+\s*x\b/g, ' ').replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+const repCount = t => { const m = String(t).match(/[x×]\s*(\d+)|(\d+)\s*x\b/i); return m ? Math.max(1, Math.min(4, +(m[1] || m[2]))) : /twice/i.test(t) ? 2 : 1; };
+function expandRepeats(s) {
+  const L = s.lines, out = [], bodies = {};
+  for (let i = 0; i < L.length; i++) if (L[i].k === 'label') {
+    const body = []; let j = i + 1;
+    while (j < L.length && L[j].k !== 'label') { body.push({ L: L[j], l: j }); j++; }
+    while (body.length && body[body.length - 1].L.k === 'gap') body.pop();
+    if (body.some(x => x.L.k === 'line' && x.L.toks.length)) (bodies[secKey(L[i].t)] = bodies[secKey(L[i].t)] || []).push({ at: i, body });
+  }
+  for (let i = 0; i < L.length; i++) {
+    out.push({ L: L[i], l: i });
+    if (L[i].k !== 'label') continue;
+    let j = i + 1; while (j < L.length && L[j].k === 'gap') j++;
+    if (j < L.length && L[j].k !== 'label') continue;              // it already has its own lines
+    const key = secKey(L[i].t), cands = bodies[key] || bodies[key.replace(/\s*\d+$/, '')];
+    if (!key || !cands) continue;
+    const src = [...cands].reverse().find(c => c.at < i) || cands[0];
+    out[out.length - 1].repl = true;
+    const n = repCount(L[i].t);
+    for (let r = 0; r < n; r++) { if (r) out.push({ L: { k: 'gap' }, l: i }); src.body.forEach(x => out.push(Object.assign({}, x))); }
+  }
+  return out;
+}
+function songRowsHTML(s, items) {
   let html = '', secId = 0, secType = null, lastType = null;
-  s.lines.forEach((L, l) => {
+  (items || s.lines.map((L, l) => ({ L, l }))).forEach(({ L, l, repl }) => {
     const isSel = sel && sel.l === l && sel.i == null;
     if (L.k === 'gap') { if (secType) lastType = secType; secType = null; html += `<div class="row gap${isSel ? ' sel' : ''}" data-l="${l}"></div>`; return; }
-    if (L.k === 'label') { secId++; secType = lastType = secTypeOf(L.t); html += `<div class="row rl sec s-${secType}" data-sec="${secId}"><div class="sh${isSel ? ' sel' : ''}" data-l="${l}">${esc(L.t)}</div></div>`; return; }
+    if (L.k === 'label') { secId++; secType = lastType = secTypeOf(L.t); html += `<div class="row rl sec s-${secType}${repl ? ' repl' : ''}" data-sec="${secId}"><div class="sh${isSel ? ' sel' : ''}" data-l="${l}">${esc(L.t)}</div></div>`; return; }
     if (!secType) { secId++; secType = lastType || 'other'; }
     html += lineHTML(L, l, s).replace('<div class="row ', `<div data-sec="${secId}" class="row sec s-${secType} `);
   });
@@ -1800,7 +1828,7 @@ function scrBuild() {
   const s = scrSong(), st = scrS(), v = $('#scrView'), D = $('#scrDoc');
   const same = SCR.songId === s.id, keep = v.scrollTop;
   const key = s.key ? 'Key: ' + disp(s, s.key) : '';
-  D.innerHTML = `<div class="scrHead"><div class="t">${esc(s.title || 'Untitled')}</div><div class="a">${esc([s.artist, key].filter(Boolean).join(' · '))}</div></div>` + songRowsHTML(s);
+  D.innerHTML = `<div class="scrHead"><div class="t">${esc(s.title || 'Untitled')}</div><div class="a">${esc([s.artist, key].filter(Boolean).join(' · '))}</div></div>` + songRowsHTML(s, st.scrExpand === false ? null : expandRepeats(s));
   D.style.setProperty('--sp', ({ tight: '0em', normal: '.15em', roomy: '.4em' })[st.scrSpace || 'normal']);
   // text size; "shrink" mode makes the longest line fit the screen width instead of wrapping
   let fs = st.scrSize;
@@ -1913,6 +1941,7 @@ function scrSheet() {
     : `<button data-sp="-5">−5</button><button data-sp="-1">−1</button><b class="val">${scrSpeedLevel()}</b><button data-sp="1">+1</button><button data-sp="5">+5</button><span class="note">1 = very slow · 60 = fast · saved with each song</span>`}</div>
   <h5>Text size</h5><div class="o"><button data-sz="-4">A−−</button><button data-sz="-1">A−</button><b class="val">${st.scrSize}px</b><button data-sz="1">A+</button><button data-sz="4">A++</button></div>
   <h5>Long lines</h5><div class="o">${opt('scrFit', 'wrap', 'Wrap onto the next line', st.scrFit || 'wrap')}${opt('scrFit', 'shrink', 'Shrink text to fit', st.scrFit || 'wrap')}</div>
+  <h5>Repeated sections (a label like “Chorus” with no words under it)</h5><div class="o">${opt('scrExpand', 'y', 'Write the words out again', st.scrExpand === false ? 'n' : 'y')}${opt('scrExpand', 'n', 'Just show the label', st.scrExpand === false ? 'n' : 'y')}</div>
   <h5>Line spacing</h5><div class="o">${opt('scrSpace', 'tight', 'Tight', st.scrSpace || 'normal')}${opt('scrSpace', 'normal', 'Normal', st.scrSpace || 'normal')}${opt('scrSpace', 'roomy', 'Roomy', st.scrSpace || 'normal')}</div>
   <h5>Chords at the top</h5><div class="o">${opt('scrChips', 'off', 'Off', st.scrChips || 'names')}${opt('scrChips', 'names', 'Chord names', st.scrChips || 'names')}${opt('scrChips', 'guitar', 'Guitar diagrams', st.scrChips || 'names')}</div>
   <h5>Countdown before it starts</h5><div class="o">${[0, 3, 5, 10].map(n => opt('scrCount', n, n ? n + ' sec' : 'Off', st.scrCount || 0)).join('')}</div>
@@ -1937,6 +1966,7 @@ $('#scrSheet').addEventListener('click', e => {
   else if (k === 'scrCount') st.scrCount = +v;
   else if (k === 'scrGuide' || k === 'scrMirror') st[k] = !!v;
   else if (k === 'scrHide') st.scrHide = v !== 'n';
+  else if (k === 'scrExpand') st.scrExpand = v !== 'n';
   else st[k] = v;
   quietSave(); scrBuild(); scrSheet();
 });
