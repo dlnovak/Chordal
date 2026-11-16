@@ -35,10 +35,10 @@ body.ch-color .rc{--chord:hsl(var(--h,45),var(--cs),var(--cl))}
 body.ch-color .pad.rc{color:hsl(var(--h,45),88%,64%)}
 body.ch-color .pad.rc.on{background:hsl(var(--h,45),88%,60%);border-color:hsl(var(--h,45),88%,60%);color:#111}
 
-body.ft-serif #stage{font-family:Georgia,"Iowan Old Style","Palatino Linotype","Times New Roman",serif}
-body.ft-rounded #stage{font-family:ui-rounded,"SF Pro Rounded","Arial Rounded MT Bold","Varela Round","Trebuchet MS",sans-serif}
-body.ft-condensed #stage{font-family:"Avenir Next Condensed","Roboto Condensed","Arial Narrow","Helvetica Neue",sans-serif;font-stretch:condensed}
-body.ft-mono #stage{font-family:ui-monospace,Menlo,Consolas,"Courier New",monospace}
+body.ft-serif #stage,body.ft-serif #scr{font-family:Georgia,"Iowan Old Style","Palatino Linotype","Times New Roman",serif}
+body.ft-rounded #stage,body.ft-rounded #scr{font-family:ui-rounded,"SF Pro Rounded","Arial Rounded MT Bold","Varela Round","Trebuchet MS",sans-serif}
+body.ft-condensed #stage,body.ft-condensed #scr{font-family:"Avenir Next Condensed","Roboto Condensed","Arial Narrow","Helvetica Neue",sans-serif;font-stretch:condensed}
+body.ft-mono #stage,body.ft-mono #scr{font-family:ui-monospace,Menlo,Consolas,"Courier New",monospace}
 #stylePop{position:fixed;inset:0;z-index:17;display:none;align-items:flex-start;justify-content:center;background:rgba(0,0,0,.45);padding:60px 12px 12px}
 #stylePop.open{display:flex}
 #styleBox{background:#1b1e24;border-radius:14px;padding:14px 16px;width:min(760px,100%);max-height:85vh;overflow:auto;color:#eee}
@@ -242,6 +242,63 @@ body.show #phint{display:none}
 .srow select{background:#2b3038;color:#eee;border:0;border-radius:7px;padding:5px;font-size:13px;max-width:150px}
 .sub{font-size:12px;color:#8a9099;text-transform:uppercase;letter-spacing:.06em;margin:18px 0 8px}
 @media (max-width:700px){#libBody{flex-direction:column}#libLists{width:auto;border-right:0;border-bottom:1px solid #23262c;max-height:34vh}}
+/* ---- scroll view ---- */
+#scr{position:fixed;inset:0;z-index:14;display:none;flex-direction:column;background:var(--stage);color:var(--lyric)}
+#scr.open{display:flex}
+#scrTop{flex:none;display:flex;align-items:center;gap:8px;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top));background:rgba(0,0,0,.35);transition:opacity .3s}
+body.light #scrTop,body.th-sepia #scrTop{background:rgba(0,0,0,.06)}
+#scrTitle{flex:1;text-align:center;font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#scr button{font:inherit;cursor:pointer;border:0;border-radius:10px;background:rgba(128,128,128,.25);color:var(--lyric);min-width:44px;min-height:44px;padding:0 12px;font-size:17px}
+#scr button.sel{background:#2f6fed;color:#fff}
+#scrChips{flex:none;display:flex;gap:8px;overflow-x:auto;padding:6px 10px;border-bottom:1px solid var(--rule);-webkit-overflow-scrolling:touch}
+#scrChips .sc{flex:none;font-weight:800;font-size:19px;color:var(--chord);min-height:40px}
+#scrChips .sc.dg{display:flex;flex-direction:column;align-items:center;cursor:pointer;font-size:15px}
+#scrChips .sc.dg b{color:var(--chord)}
+#scrView{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;position:relative}
+#scrView::-webkit-scrollbar{display:none}
+#scrDoc{padding:18px max(16px,4vw) 75vh;max-width:1100px;margin:0 auto}
+#scrDoc .ln{flex-wrap:wrap}
+#scrDoc.meas .ln{flex-wrap:nowrap;width:max-content}
+#scrDoc.shrink .ln{flex-wrap:nowrap}
+#scrDoc .add,#scrDoc .empty{display:none}
+#scrDoc .gap{outline:none!important}
+#scrDoc .ln,#scrDoc .g{align-items:flex-end}
+#scrDoc .ch{min-height:0}
+#scrDoc .noch .ch{display:none}
+@media (max-width:430px){#scrAm,#scrAp{display:none}#scrBar{gap:6px}}
+#scrDoc .scrHead{margin-bottom:.6em;border-bottom:2px solid var(--rule);padding-bottom:.3em}
+#scrDoc .scrHead .t{font-size:1.5em;font-weight:800;line-height:1.1}
+#scrDoc .scrHead .a{font-size:.75em;color:var(--muted)}
+#scr.mirror #scrDoc{transform:scaleX(-1)}
+#scrGuide{display:none;position:absolute;left:0;right:0;top:32%;height:0;border-top:3px solid rgba(255,197,61,.55);pointer-events:none;z-index:2}
+#scr.guide #scrGuide{display:block}
+#scrMid{flex:1;position:relative;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+#scrCount{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:30vmin;font-weight:900;color:var(--chord);background:rgba(0,0,0,.35);pointer-events:none;z-index:3}
+#scrCount.small{font-size:7vmin}
+#scrCount.on{display:flex}
+#scrBar{flex:none;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:8px 10px;padding-bottom:max(10px,env(safe-area-inset-bottom));background:rgba(0,0,0,.35);transition:opacity .3s}
+body.light #scrBar,body.th-sepia #scrBar{background:rgba(0,0,0,.06)}
+#scrPlay{min-width:72px!important;font-size:24px!important;background:#2f6fed!important;color:#fff!important}
+#scrPlay.on{background:#1f7a3a!important}
+#scrSpd{display:flex;flex-direction:column;align-items:center;min-width:58px;line-height:1}
+#scrSpd b{font-size:22px}
+#scrSpd span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+#scrProg{flex:none;height:4px;background:rgba(128,128,128,.25)}
+#scrProg i{display:block;height:100%;width:0;background:#2f6fed}
+#scr.hidectl #scrTop,#scr.hidectl #scrBar{opacity:0;pointer-events:none}
+#scr.hidectl #scrChips{opacity:.85}
+#scrSheet{position:absolute;left:0;right:0;bottom:0;max-height:calc(100% - 8px);overflow:auto;background:#1b1e24;color:#eee;border-radius:16px 16px 0 0;padding:12px 14px max(16px,env(safe-area-inset-bottom));z-index:5;transform:translateY(105%);visibility:hidden;transition:transform .25s,visibility 0s .25s;box-shadow:0 -10px 30px rgba(0,0,0,.5)}
+#scrSheet.open{transform:none;visibility:visible;transition:transform .25s}
+#scrSheet .sh1{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+#scrSheet .sh1 b{font-size:18px}
+#scrSheet h5{margin:12px 0 6px;font-size:12px;color:#8a9099;text-transform:uppercase;letter-spacing:.06em}
+#scrSheet .o{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#scrSheet button{background:#2b3038!important;color:#eee!important;font-size:15px!important;min-height:42px}
+#scrSheet button.sel{background:#2f6fed!important;color:#fff!important}
+#scrSheet .val{font-size:18px;min-width:64px;text-align:center}
+#scrSheet .note{font-size:12.5px;color:#8a9099;margin-left:6px}
+#scrSheet p.note{margin:14px 0 0}
+#stylePop{z-index:30}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#2f6fed;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:30}
 #toast.show{opacity:1}
 </style>
@@ -254,6 +311,7 @@ body.show #phint{display:none}
   <button id="bLib" title="All songs and playlists">📋 Songs</button>
   <button id="bShow" title="Full screen: hide all controls (S)">⛶ Show</button>
   <button id="bPlay" title="Play the song's chords from your keyboard">🎹 Play</button>
+  <button id="bScroll" title="Vertical auto-scrolling view for phones and tablets">📜 Scroll</button>
   <button id="bNew">＋ New song</button>
   <button id="bText" title="Paste or edit the words">✎ Lyrics</button>
   <button id="bUndo" title="Undo (Ctrl+Z)">↶ Undo</button>
@@ -273,7 +331,7 @@ body.show #phint{display:none}
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v23</span>
+  <span class="lbl" title="App version">v24</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -334,7 +392,7 @@ body.show #phint{display:none}
   <div id="phint">Keys play the chords · <b>Space</b> or <b>Esc</b> stop · hold <b>Shift</b> = sustain pedal · <b>1 2 3 4</b> = repeat off / ♩ / ♪ / 16th · <b>Enter</b> = tap tempo · <b>M</b> = metronome</div>
 </div>
 
-<div id="float"><button id="fPrev">◀</button><button id="fNext">▶</button><button id="fStyle">🎨</button><button id="fLegend">🎸 Chords</button><button id="fDiag">▦ Diagrams</button><button id="fPlay">🎹 Play</button><button id="fEdit">✎ Edit</button></div>
+<div id="float"><button id="fPrev">◀</button><button id="fNext">▶</button><button id="fStyle">🎨</button><button id="fLegend">🎸 Chords</button><button id="fDiag">▦ Diagrams</button><button id="fPlay">🎹 Play</button><button id="fScroll">📜 Scroll</button><button id="fEdit">✎ Edit</button></div>
 
 <div id="ed">
   <div id="edBox">
@@ -372,6 +430,14 @@ body.show #phint{display:none}
     <div id="libLists"></div>
     <div id="libMain"></div>
   </div>
+</div>
+<div id="scr">
+  <div id="scrTop"><button id="scrClose" title="Close (Esc)">✕</button><button id="scrPrev" title="Previous song">◀</button><div id="scrTitle"></div><button id="scrNext" title="Next song">▶</button><button id="scrSet" title="Options">⚙</button></div>
+  <div id="scrChips"></div>
+  <div id="scrMid"><div id="scrView"><div id="scrDoc"></div></div><div id="scrGuide"></div><div id="scrCount"></div>
+    <div id="scrSheet"></div></div>
+  <div id="scrProg"><i></i></div>
+  <div id="scrBar"><button id="scrHome" title="Back to the top">⤒</button><button id="scrSlower" title="Slower (↓)">−</button><div id="scrSpd"><b id="scrSpdV">15</b><span id="scrSpdL">speed</span></div><button id="scrFaster" title="Faster (↑)">+</button><button id="scrPlay" title="Start / pause (Space)">▶</button><button id="scrAm" title="Smaller text">A−</button><button id="scrAp" title="Bigger text">A+</button></div>
 </div>
 <div id="stylePop"><div id="styleBox"></div></div>
 <div id="toast"></div>
@@ -1162,6 +1228,9 @@ function norm(s) {
   if (s.beats) o.beats = s.beats;
   if (Array.isArray(s.palette) && s.palette.length) o.palette = s.palette;
   if (s.voicings && Object.keys(s.voicings).length) o.voicings = s.voicings;
+  if (s.scrSpeed) o.scrSpeed = s.scrSpeed;
+  if (s.scrDur) o.scrDur = s.scrDur;
+  if (s.scrMode) o.scrMode = s.scrMode;
   return o;
 }
 function load() {
@@ -1247,14 +1316,7 @@ function render() {
   $('#title').textContent = s.title || 'Untitled';
   $('#artist').textContent = s.artist || '';
   $('#key').textContent = key ? 'Key: ' + disp(s, key) + (n ? `  (orig ${key})` : '') : (n ? `Transposed ${n > 0 ? '+' : ''}${n}` : '');
-  let html = '', secId = 0, secType = null, lastType = null;
-  s.lines.forEach((L, l) => {
-    const isSel = sel && sel.l === l && sel.i == null;
-    if (L.k === 'gap') { if (secType) lastType = secType; secType = null; html += `<div class="row gap${isSel ? ' sel' : ''}" data-l="${l}"></div>`; return; }
-    if (L.k === 'label') { secId++; secType = lastType = secTypeOf(L.t); html += `<div class="row rl sec s-${secType}" data-sec="${secId}"><div class="sh${isSel ? ' sel' : ''}" data-l="${l}">${esc(L.t)}</div></div>`; return; }
-    if (!secType) { secId++; secType = lastType || 'other'; }
-    html += lineHTML(L, l, s).replace('<div class="row ', `<div data-sec="${secId}" class="row sec s-${secType} `);
-  });
+  const html = songRowsHTML(s);
   $('#body').innerHTML = s.lines.length ? html : '<div id="empty">Tap <b>✎ Lyrics</b> to paste the words of this song.</div>';
   $('#tLbl').textContent = n ? (n > 0 ? '+' : '') + n : '0';
   $('#bUp').disabled = n >= 8; $('#bDown').disabled = n <= -8;
@@ -1264,6 +1326,18 @@ function render() {
   renderDiag();
   fit();
   if (playOn) renderPads();
+  if (typeof SCR !== 'undefined' && SCR.open) scrBuild();
+}
+function songRowsHTML(s) {
+  let html = '', secId = 0, secType = null, lastType = null;
+  s.lines.forEach((L, l) => {
+    const isSel = sel && sel.l === l && sel.i == null;
+    if (L.k === 'gap') { if (secType) lastType = secType; secType = null; html += `<div class="row gap${isSel ? ' sel' : ''}" data-l="${l}"></div>`; return; }
+    if (L.k === 'label') { secId++; secType = lastType = secTypeOf(L.t); html += `<div class="row rl sec s-${secType}" data-sec="${secId}"><div class="sh${isSel ? ' sel' : ''}" data-l="${l}">${esc(L.t)}</div></div>`; return; }
+    if (!secType) { secId++; secType = lastType || 'other'; }
+    html += lineHTML(L, l, s).replace('<div class="row ', `<div data-sec="${secId}" class="row sec s-${secType} `);
+  });
+  return html;
 }
 /* Layout: try 1-4 columns, split the song evenly between them (at section breaks when possible),
    and use whichever arrangement gives the biggest text. Lines are never wrapped. */
@@ -1708,6 +1782,210 @@ $('#lib').addEventListener('change', e => {
   if (p && !p.ids.includes(id)) { p.ids.push(id); savePl(); toast('Added to “' + p.name + '”'); } else toast('Already in “' + p.name + '”');
   renderLib();
 });
+
+/* ================= 📜 Scroll view: one vertical column that scrolls by itself (phones / tablets / teleprompter) ================= */
+const SCR = { open: false, playing: false, pos: 0, last: 0, touching: false, songId: null, raf: 0, hideT: 0, wl: null, countT: 0, endT: 0 };
+const scrS = () => { const s = settings; if (s.scrSize == null) s.scrSize = Math.round(Math.max(20, Math.min(40, innerWidth / 20))); return s; };
+const scrSong = () => song();
+function quietSave() { restoring = true; save(); restoring = false; }
+function scrSpeedLevel() { return scrSong().scrSpeed || 15; }
+function scrPxPerSec() {
+  const s = scrSong(), v = $('#scrView'), max = Math.max(1, v.scrollHeight - v.clientHeight);
+  if (s.scrMode === 'dur') return max / Math.max(10, s.scrDur || 180);
+  return scrSpeedLevel() * 2.6 * (scrS().scrSize / 26);
+}
+const fmtTime = t => Math.floor(t / 60) + ':' + String(Math.round(t % 60)).padStart(2, '0');
+function scrBuild() {
+  if (!SCR.open) return;
+  const s = scrSong(), st = scrS(), v = $('#scrView'), D = $('#scrDoc');
+  const same = SCR.songId === s.id, keep = v.scrollTop;
+  const key = s.key ? 'Key: ' + disp(s, s.key) : '';
+  D.innerHTML = `<div class="scrHead"><div class="t">${esc(s.title || 'Untitled')}</div><div class="a">${esc([s.artist, key].filter(Boolean).join(' · '))}</div></div>` + songRowsHTML(s);
+  D.style.setProperty('--sp', ({ tight: '0em', normal: '.15em', roomy: '.4em' })[st.scrSpace || 'normal']);
+  // text size; "shrink" mode makes the longest line fit the screen width instead of wrapping
+  let fs = st.scrSize;
+  D.style.fontSize = fs + 'px';
+  if (st.scrFit === 'shrink') {
+    D.classList.add('meas');
+    const w = Math.max(...[...D.querySelectorAll('.ln')].map(l => l.scrollWidth), 1);
+    D.classList.remove('meas');
+    const avail = D.clientWidth - 4;
+    if (w > avail) fs = Math.max(11, fs * avail / w);
+    D.style.fontSize = fs + 'px';
+  }
+  D.classList.toggle('shrink', st.scrFit === 'shrink');
+  markBoxes(D); wrapBlocks(D);
+  $('#scr').classList.toggle('mirror', !!st.scrMirror);
+  $('#scr').classList.toggle('guide', !!st.scrGuide);
+  $('#scrTitle').textContent = s.title || 'Untitled';
+  // chord strip
+  const mode = st.scrChips || 'names', list = songPalette(s).filter(isChord), C = dgColors(isLightTheme());
+  $('#scrChips').style.display = mode === 'off' || !list.length ? 'none' : 'flex';
+  $('#scrChips').innerHTML = mode === 'guitar'
+    ? list.map(c => `<div class="sc dg" data-chord="${esc(c)}"><b class="rc" style="--h:${rootHue(c) ?? 45}">${esc(c)}</b>${diagramSVG(shapeFor(c), C).replace('<svg ', '<svg width="58" height="70" ')}</div>`).join('')
+    : list.map(c => `<button class="sc rc" data-chord="${esc(c)}"${hueAttr(c)}>${esc(c)}</button>`).join('');
+  SCR.songId = s.id;
+  v.scrollTop = SCR.pos = same ? keep : 0;
+  scrPaint();
+}
+function scrPaint() {
+  const s = scrSong(), v = $('#scrView');
+  $('#scrPlay').textContent = SCR.playing ? '❚❚' : '▶';
+  $('#scrPlay').classList.toggle('on', SCR.playing);
+  const dur = s.scrMode === 'dur';
+  $('#scrSpdV').textContent = dur ? fmtTime(s.scrDur || 180) : scrSpeedLevel();
+  $('#scrSpdL').textContent = dur ? 'song length' : 'speed';
+  const max = Math.max(1, v.scrollHeight - v.clientHeight);
+  $('#scrProg i').style.width = Math.min(100, v.scrollTop / max * 100) + '%';
+}
+function scrLoop(t) {
+  SCR.raf = 0;
+  if (!SCR.open || !SCR.playing) return;
+  const v = $('#scrView'), dt = Math.min(0.1, (t - (SCR.last || t)) / 1000); SCR.last = t;
+  const max = v.scrollHeight - v.clientHeight;
+  if (!SCR.touching) {
+    SCR.pos = Math.min(max, SCR.pos + scrPxPerSec() * dt);
+    SCR.setting = true; v.scrollTop = SCR.pos;
+    if (SCR.pos >= max - 0.5) { scrEnd(); return; }
+  }
+  scrPaint();
+  SCR.raf = requestAnimationFrame(scrLoop);
+}
+async function scrWake(on) {
+  try {
+    if (on && 'wakeLock' in navigator && !SCR.wl) { SCR.wl = await navigator.wakeLock.request('screen'); SCR.wl.addEventListener('release', () => SCR.wl = null); }
+    if (!on && SCR.wl) { await SCR.wl.release(); SCR.wl = null; }
+  } catch (e) {}
+}
+function scrPlay(on) {
+  clearInterval(SCR.countT); clearTimeout(SCR.endT); $('#scrCount').classList.remove('on');
+  if (on && !SCR.playing) {
+    const n = +(scrS().scrCount || 0);
+    if (n > 0) {
+      let k = n; const c = $('#scrCount'); c.textContent = k; c.classList.add('on'); $('#scrPlay').textContent = '✕';
+      SCR.counting = true;
+      SCR.countT = setInterval(() => { k--; if (k > 0) c.textContent = k; else { clearInterval(SCR.countT); c.classList.remove('on'); SCR.counting = false; go(); } }, 1000);
+      return;
+    }
+    go();
+  } else if (!on) { SCR.playing = false; SCR.counting = false; scrWake(false); scrShowCtl(); scrPaint(); }
+  function go() {
+    SCR.playing = true; SCR.last = 0; SCR.pos = $('#scrView').scrollTop;
+    scrWake(true); scrPaint(); scrAutoHide();
+    if (!SCR.raf) SCR.raf = requestAnimationFrame(scrLoop);
+  }
+}
+function scrToggle() { if (SCR.counting) { scrPlay(false); return; } scrPlay(!SCR.playing); }
+function scrEnd() {
+  SCR.playing = false; scrWake(false); scrShowCtl(); scrPaint();
+  if (scrS().scrEnd === 'next' && activeIds().length > 1) {
+    const c = $('#scrCount'); let k = 4; c.textContent = 'Next song in ' + k; c.classList.add('on', 'small');
+    SCR.countT = setInterval(() => { k--; if (k > 0) c.textContent = 'Next song in ' + k; else { clearInterval(SCR.countT); c.classList.remove('on', 'small'); nav(1); scrBuild(); scrPlay(true); } }, 1000);
+  }
+}
+function scrShowCtl() { clearTimeout(SCR.hideT); $('#scr').classList.remove('hidectl'); }
+function scrAutoHide() {
+  clearTimeout(SCR.hideT);
+  if (scrS().scrHide === false) return;
+  SCR.hideT = setTimeout(() => { if (SCR.playing && !$('#scrSheet').classList.contains('open')) $('#scr').classList.add('hidectl'); }, 2500);
+}
+function scrSpeed(d) {
+  const s = scrSong();
+  if (s.scrMode === 'dur') s.scrDur = Math.max(20, Math.min(1200, (s.scrDur || 180) + d * 5));
+  else s.scrSpeed = Math.max(1, Math.min(60, scrSpeedLevel() + d));
+  quietSave(); scrPaint(); scrShowCtl(); if (SCR.playing) scrAutoHide();
+  if ($('#scrSheet').classList.contains('open')) scrSheet();
+}
+function scrSize(d) { const st = scrS(); st.scrSize = Math.max(12, Math.min(72, st.scrSize + d)); quietSave(); scrBuild(); if ($('#scrSheet').classList.contains('open')) scrSheet(); }
+function openScroll() {
+  setSel(null); SCR.open = true; SCR.songId = null;
+  $('#scr').classList.add('open'); document.body.classList.add('scrolling');
+  scrBuild(); scrShowCtl();
+  if (!localStorage.getItem('stagecharts.scrTip')) { localStorage.setItem('stagecharts.scrTip', '1'); toast('Tap the lyrics to start or pause · drag to move · ⚙ for options', 5000); }
+}
+function closeScroll() { scrPlay(false); SCR.open = false; $('#scr').classList.remove('open', 'hidectl'); $('#scrSheet').classList.remove('open'); document.body.classList.remove('scrolling'); }
+const opt = (k, v, label, cur) => `<button data-k="${k}" data-v="${v}" class="${String(cur) === String(v) ? 'sel' : ''}">${label}</button>`;
+function scrSheet() {
+  const st = scrS(), s = scrSong(), dur = s.scrMode === 'dur';
+  $('#scrSheet').innerHTML = `<div class="sh1"><b>Scroll options</b><button id="scrSheetX">✕</button></div>
+  <h5>Speed</h5><div class="o">${opt('mode', 'speed', 'Set a speed', dur ? 'dur' : 'speed')}${opt('mode', 'dur', 'Fit to song length', dur ? 'dur' : 'speed')}</div>
+  <div class="o">${dur ? `<button data-sp="-6">−30s</button><button data-sp="-1">−5s</button><b class="val">${fmtTime(s.scrDur || 180)}</b><button data-sp="1">+5s</button><button data-sp="6">+30s</button><span class="note">The whole song scrolls in this time</span>`
+    : `<button data-sp="-5">−5</button><button data-sp="-1">−1</button><b class="val">${scrSpeedLevel()}</b><button data-sp="1">+1</button><button data-sp="5">+5</button><span class="note">1 = very slow · 60 = fast · saved with each song</span>`}</div>
+  <h5>Text size</h5><div class="o"><button data-sz="-4">A−−</button><button data-sz="-1">A−</button><b class="val">${st.scrSize}px</b><button data-sz="1">A+</button><button data-sz="4">A++</button></div>
+  <h5>Long lines</h5><div class="o">${opt('scrFit', 'wrap', 'Wrap onto the next line', st.scrFit || 'wrap')}${opt('scrFit', 'shrink', 'Shrink text to fit', st.scrFit || 'wrap')}</div>
+  <h5>Line spacing</h5><div class="o">${opt('scrSpace', 'tight', 'Tight', st.scrSpace || 'normal')}${opt('scrSpace', 'normal', 'Normal', st.scrSpace || 'normal')}${opt('scrSpace', 'roomy', 'Roomy', st.scrSpace || 'normal')}</div>
+  <h5>Chords at the top</h5><div class="o">${opt('scrChips', 'off', 'Off', st.scrChips || 'names')}${opt('scrChips', 'names', 'Chord names', st.scrChips || 'names')}${opt('scrChips', 'guitar', 'Guitar diagrams', st.scrChips || 'names')}</div>
+  <h5>Countdown before it starts</h5><div class="o">${[0, 3, 5, 10].map(n => opt('scrCount', n, n ? n + ' sec' : 'Off', st.scrCount || 0)).join('')}</div>
+  <h5>Reading guide</h5><div class="o">${opt('scrGuide', '', 'Off', st.scrGuide ? 1 : '')}${opt('scrGuide', 1, 'Show a line to read at', st.scrGuide ? 1 : '')}</div>
+  <h5>At the end of the song</h5><div class="o">${opt('scrEnd', 'stop', 'Stop', st.scrEnd || 'stop')}${opt('scrEnd', 'next', 'Go to the next song and keep scrolling', st.scrEnd || 'stop')}</div>
+  <h5>Controls while scrolling</h5><div class="o">${opt('scrHide', 'y', 'Hide (tap to show)', st.scrHide === false ? 'n' : 'y')}${opt('scrHide', 'n', 'Always show', st.scrHide === false ? 'n' : 'y')}</div>
+  <h5>Mirror (for a teleprompter glass)</h5><div class="o">${opt('scrMirror', '', 'Off', st.scrMirror ? 1 : '')}${opt('scrMirror', 1, 'Mirror the text', st.scrMirror ? 1 : '')}</div>
+  <h5>Look</h5><div class="o"><button id="scrStyle">🎨 Colors, boxes, chord colors &amp; fonts…</button></div>
+  <p class="note">The screen stays awake while it scrolls. Keys and pedals: Space = start/stop · ↑ ↓ = speed · Page Down / Up = jump · ← → = song · Home = top.</p>`;
+  $('#scrSheet').classList.add('open'); scrShowCtl();
+}
+$('#scrSheet').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const st = scrS(), s = scrSong();
+  if (b.id === 'scrSheetX') { $('#scrSheet').classList.remove('open'); if (SCR.playing) scrAutoHide(); return; }
+  if (b.id === 'scrStyle') { renderStyleBox(); $('#stylePop').classList.add('open'); return; }
+  if (b.dataset.sp) { scrSpeed(+b.dataset.sp); return; }
+  if (b.dataset.sz) { scrSize(+b.dataset.sz); return; }
+  const k = b.dataset.k; if (!k) return;
+  let v = b.dataset.v;
+  if (k === 'mode') { s.scrMode = v === 'dur' ? 'dur' : undefined; if (v === 'dur' && !s.scrDur) s.scrDur = 180; }
+  else if (k === 'scrCount') st.scrCount = +v;
+  else if (k === 'scrGuide' || k === 'scrMirror') st[k] = !!v;
+  else if (k === 'scrHide') st.scrHide = v !== 'n';
+  else st[k] = v;
+  quietSave(); scrBuild(); scrSheet();
+});
+const scrV = $('#scrView');
+scrV.addEventListener('scroll', () => { if (SCR.setting) { SCR.setting = false; return; } SCR.pos = scrV.scrollTop; scrPaint(); });
+scrV.addEventListener('touchstart', () => { SCR.touching = true; scrShowCtl(); }, { passive: true });
+scrV.addEventListener('touchend', () => { SCR.touching = false; SCR.pos = scrV.scrollTop; if (SCR.playing) scrAutoHide(); }, { passive: true });
+scrV.addEventListener('wheel', () => { SCR.pos = scrV.scrollTop; }, { passive: true });
+scrV.addEventListener('click', e => {
+  const ch = e.target.closest('.ch');
+  if (ch && ch.textContent.trim()) { playChord(ch.textContent.trim()); return; }
+  if ($('#scrSheet').classList.contains('open')) { $('#scrSheet').classList.remove('open'); return; }
+  if ($('#scr').classList.contains('hidectl')) { scrShowCtl(); scrAutoHide(); return; }   // first tap while hidden just shows the controls
+  scrToggle();
+});
+$('#scrChips').addEventListener('click', e => { const c = e.target.closest('[data-chord]'); if (c) playChord(c.dataset.chord); });
+$('#scrPlay').onclick = scrToggle;
+$('#scrSlower').onclick = () => scrSpeed(-1);
+$('#scrFaster').onclick = () => scrSpeed(1);
+$('#scrAm').onclick = () => scrSize(-2);
+$('#scrAp').onclick = () => scrSize(2);
+$('#scrHome').onclick = () => { scrV.scrollTop = SCR.pos = 0; scrPaint(); };
+$('#scrSet').onclick = () => { $('#scrSheet').classList.contains('open') ? $('#scrSheet').classList.remove('open') : scrSheet(); };
+$('#scrClose').onclick = closeScroll;
+$('#scrPrev').onclick = () => { const p = SCR.playing; scrPlay(false); nav(-1); scrBuild(); if (p) scrPlay(true); };
+$('#scrNext').onclick = () => { const p = SCR.playing; scrPlay(false); nav(1); scrBuild(); if (p) scrPlay(true); };
+$('#bScroll').onclick = openScroll;
+$('#fScroll').onclick = () => { setShow(false); openScroll(); };
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && SCR.playing) scrWake(true); });
+window.addEventListener('resize', () => { if (SCR.open) scrBuild(); });
+document.addEventListener('keydown', e => {
+  if (!SCR.open || $('#stylePop').classList.contains('open')) return;
+  if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  const k = e.key, page = scrV.clientHeight * 0.8;
+  let done = true;
+  if (k === ' ' || k === 'Enter') scrToggle();
+  else if (k === 'ArrowUp') scrSpeed(1);
+  else if (k === 'ArrowDown') scrSpeed(-1);
+  else if (k === 'PageDown') { scrV.scrollTop += page; SCR.pos = scrV.scrollTop; }
+  else if (k === 'PageUp') { scrV.scrollTop -= page; SCR.pos = scrV.scrollTop; }
+  else if (k === 'ArrowRight') $('#scrNext').click();
+  else if (k === 'ArrowLeft') $('#scrPrev').click();
+  else if (k === 'Home') $('#scrHome').click();
+  else if (k === '+' || k === '=') scrSize(2);
+  else if (k === '-') scrSize(-2);
+  else if (k === 'Escape') { if ($('#scrSheet').classList.contains('open')) $('#scrSheet').classList.remove('open'); else closeScroll(); }
+  else done = false;
+  if (done) { e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
 
 /* ================= toolbar ================= */
 $('#bPrev').onclick = () => nav(-1);
