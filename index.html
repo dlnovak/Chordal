@@ -313,6 +313,73 @@ body.light #scrBar,body.th-sepia #scrBar{background:rgba(0,0,0,.06)}
 #styleBox .hlnames label{display:inline-flex;align-items:center;gap:6px}
 #styleBox .hlnames i{font-style:normal;color:var(--hlc);font-size:18px}
 #styleBox .hlnames input{width:120px;background:#0f1115;border:1px solid #444;color:#eee;border-radius:7px;padding:6px 8px;font-size:14px}
+/* ---- karaoke view ---- */
+#kar{position:fixed;inset:0;z-index:14;display:none;flex-direction:column;background:var(--stage);color:var(--lyric)}
+#kar.open{display:flex}
+#kar button{font:inherit;cursor:pointer;border:0;border-radius:10px;background:rgba(128,128,128,.25);color:var(--lyric);min-width:44px;min-height:44px;padding:0 12px;font-size:16px}
+#kar button.sel{background:#2f6fed;color:#fff}
+#karTopBar{flex:none;display:flex;align-items:center;gap:8px;padding:8px 10px;padding-top:max(8px,env(safe-area-inset-top));background:rgba(0,0,0,.3)}
+body.light #karTopBar,body.th-sepia #karTopBar,body.light #karBar,body.th-sepia #karBar{background:rgba(0,0,0,.06)}
+#karTitle{flex:1;text-align:center;font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#karNow{flex:none;display:flex;align-items:center;justify-content:center;gap:16px;padding:8px 12px;border-bottom:1px solid var(--rule);min-height:76px}
+#karNowC{display:flex;align-items:center;gap:12px}
+#karNowC .big{font-size:46px;font-weight:900;color:var(--chord);line-height:1}
+#karNowC .sm{font-size:26px;font-weight:800;color:var(--chord);opacity:.75}
+#karNowC .lbl{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+#karDots{display:inline-flex;gap:6px}
+#karDots i{width:13px;height:13px;border-radius:50%;background:rgba(128,128,128,.35)}
+#karDots i.a{background:#ffc53d}#karDots i.b{background:#5cc8ff}
+#karMid{flex:1;position:relative;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+#karView{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+#karView::-webkit-scrollbar{display:none}
+#karDoc{padding:14px max(16px,4vw) 70vh;max-width:1100px;margin:0 auto}
+#karDoc .ln{flex-wrap:wrap}
+#karDoc .ln,#karDoc .g{align-items:flex-end}
+#karDoc .ch{min-height:0}
+#karDoc .noch .ch{display:none}
+#karDoc .add,#karDoc .empty{display:none}
+#karDoc .gap{outline:none!important}
+#karDoc .repl .sh::after{content:' ↻';opacity:.75}
+#karDoc .row{transition:opacity .3s}
+#karDoc .row.kcur{background:rgba(255,197,61,.12);border-radius:.3em;box-shadow:inset .18em 0 0 #ffc53d}
+#karDoc .ch.kon,#karDoc .ch.knext{align-self:flex-start}
+#karDoc .ch.kon{background:var(--chord);color:#111!important;border-radius:.2em;box-shadow:0 0 0 .12em var(--chord);animation:kpulse .35s}
+#karDoc .ch.knext{outline:2px dashed var(--chord);border-radius:.2em}
+@keyframes kpulse{from{transform:scale(1.25)}to{transform:none}}
+#karMsg{position:absolute;left:12px;right:12px;top:10px;z-index:2;background:#1b1e24;color:#ddd;border-radius:12px;padding:12px 14px;font-size:15px;line-height:1.4;box-shadow:0 6px 20px rgba(0,0,0,.4)}
+#karCount{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-size:30vmin;font-weight:900;color:var(--chord);background:rgba(0,0,0,.35);pointer-events:none;z-index:3}
+#karCount.on{display:flex}
+#karBar,#karTeachBar{flex:none;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;padding:8px 10px;padding-bottom:max(10px,env(safe-area-inset-bottom));background:rgba(0,0,0,.3)}
+#karTeachBar{display:none;background:#3a1218}
+#kar.teaching #karTeachBar{display:flex}
+#kar.teaching #karBar{display:none}
+#karPlay{min-width:72px!important;font-size:24px!important;background:#2f6fed!important;color:#fff!important}
+#karPlay.on{background:#1f7a3a!important}
+#karTeach{background:#7a1f2b!important;color:#fff!important}
+#karTempoBox{display:flex;flex-direction:column;align-items:center;line-height:1;min-width:52px;cursor:pointer}
+#karTempoBox b{font-size:20px}#karTempoBox span{font-size:10px;color:var(--muted);letter-spacing:.06em;margin-top:3px}
+#karTapBtn{flex:1;max-width:520px;min-height:84px!important;font-size:30px!important;font-weight:900;background:#d6336c!important;color:#fff!important;display:flex;flex-direction:column;align-items:center;justify-content:center;touch-action:manipulation}
+#karTapBtn small{font-size:13px;font-weight:600;opacity:.85}
+#karTapBtn:active{transform:scale(.97);background:#ff4d8d!important}
+#karSheet{position:absolute;left:0;right:0;bottom:0;max-height:calc(100% - 8px);overflow:auto;background:#1b1e24;color:#eee;border-radius:16px 16px 0 0;padding:12px 14px 16px;z-index:5;transform:translateY(105%);visibility:hidden;transition:transform .25s,visibility 0s .25s;box-shadow:0 -10px 30px rgba(0,0,0,.5)}
+#karSheet.open{transform:none;visibility:visible;transition:transform .25s}
+#karSheet .sh1{display:flex;align-items:center;justify-content:space-between}
+#karSheet .sh1 b{font-size:18px}
+#karSheet h5{margin:12px 0 6px;font-size:12px;color:#8a9099;text-transform:uppercase;letter-spacing:.06em}
+#karSheet .o{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#karSheet button{background:#2b3038!important;color:#eee!important;font-size:14px!important;min-height:40px}
+#karSheet button.sel{background:#2f6fed!important;color:#fff!important}
+#karSheet button.dng{background:#5a1f24!important}
+#karSheet .val{font-size:17px;min-width:80px;text-align:center}
+#karSheet .note{font-size:12.5px;color:#8a9099;text-transform:none;letter-spacing:0}
+#karSheet .mix label{display:flex;align-items:center;gap:8px;margin-right:14px;font-size:14px}
+#karSheet .grid{overflow-x:auto}
+#karSheet .grow{display:flex;align-items:center;gap:3px;margin-bottom:4px}
+#karSheet .grow span{width:50px;font-size:12px;color:#aaa;flex:none}
+#karSheet .cell{min-width:22px!important;width:22px;min-height:30px!important;height:30px;padding:0!important;border-radius:5px!important;font-size:11px!important}
+#karSheet .cell.beat{margin-left:6px}
+#karSheet .cell.c1{background:#2f6fed!important}
+#karSheet .cell.c2{background:#ffc53d!important;color:#111!important}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#2f6fed;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:30}
 #toast.show{opacity:1}
 </style>
@@ -326,6 +393,7 @@ body.light #scrBar,body.th-sepia #scrBar{background:rgba(0,0,0,.06)}
   <button id="bShow" title="Full screen: hide all controls (S)">⛶ Show</button>
   <button id="bPlay" title="Play the song's chords from your keyboard">🎹 Play</button>
   <button id="bScroll" title="Vertical auto-scrolling view for phones and tablets">📜 Scroll</button>
+  <button id="bKar" title="Play along: drums and chords in time while you sing">🎤 Karaoke</button>
   <button id="bNew">＋ New song</button>
   <button id="bText" title="Paste or edit the words">✎ Lyrics</button>
   <button id="bUndo" title="Undo (Ctrl+Z)">↶ Undo</button>
@@ -345,7 +413,7 @@ body.light #scrBar,body.th-sepia #scrBar{background:rgba(0,0,0,.06)}
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v26</span>
+  <span class="lbl" title="App version">v27</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -406,7 +474,7 @@ body.light #scrBar,body.th-sepia #scrBar{background:rgba(0,0,0,.06)}
   <div id="phint">Keys play the chords · <b>Space</b> or <b>Esc</b> stop · hold <b>Shift</b> = sustain pedal · <b>1 2 3 4</b> = repeat off / ♩ / ♪ / 16th · <b>Enter</b> = tap tempo · <b>M</b> = metronome</div>
 </div>
 
-<div id="float"><button id="fPrev">◀</button><button id="fNext">▶</button><button id="fStyle">🎨</button><button id="fLegend">🎸 Chords</button><button id="fDiag">▦ Diagrams</button><button id="fPlay">🎹 Play</button><button id="fScroll">📜 Scroll</button><button id="fEdit">✎ Edit</button></div>
+<div id="float"><button id="fPrev">◀</button><button id="fNext">▶</button><button id="fStyle">🎨</button><button id="fLegend">🎸 Chords</button><button id="fDiag">▦ Diagrams</button><button id="fPlay">🎹 Play</button><button id="fScroll">📜 Scroll</button><button id="fKar">🎤 Karaoke</button><button id="fEdit">✎ Edit</button></div>
 
 <div id="ed">
   <div id="edBox">
@@ -452,6 +520,13 @@ body.light #scrBar,body.th-sepia #scrBar{background:rgba(0,0,0,.06)}
     <div id="scrSheet"></div></div>
   <div id="scrProg"><i></i></div>
   <div id="scrBar"><button id="scrHome" title="Back to the top">⤒</button><button id="scrSlower" title="Slower (↓)">−</button><div id="scrSpd"><b id="scrSpdV">15</b><span id="scrSpdL">speed</span></div><button id="scrFaster" title="Faster (↑)">+</button><button id="scrPlay" title="Start / pause (Space)">▶</button><button id="scrAm" title="Smaller text">A−</button><button id="scrAp" title="Bigger text">A+</button></div>
+</div>
+<div id="kar">
+  <div id="karTopBar"><button id="karClose" title="Close (Esc)">✕</button><button id="karPrev">◀</button><div id="karTitle"></div><button id="karNext">▶</button><button id="karSet" title="Options">⚙</button></div>
+  <div id="karNow"><div id="karNowC"></div><span id="karDots"></span></div>
+  <div id="karMid"><div id="karView"><div id="karDoc"></div></div><div id="karMsg"></div><div id="karCount"></div><div id="karSheet"></div></div>
+  <div id="karBar"><button id="karTop" title="Back to the start (Home)">⏮</button><button id="karPlay" title="Play / pause (Space)">▶</button><div id="karTempoBox" title="Tempo"><b id="karTempo">100</b><span>BPM</span></div><button id="karDrum">🥁</button><button id="karTeach" title="Teach it when the chords change">● Teach</button></div>
+  <div id="karTeachBar"><button id="karUndo" title="Undo the last tap (Backspace)">↶ Undo</button><button id="karTapBtn">TAP<small>when the chord changes</small></button><button id="karDone" title="Stop and save (Esc)">■ Done</button></div>
 </div>
 <div id="stylePop"><div id="styleBox"></div></div>
 <div id="toast"></div>
@@ -803,7 +878,7 @@ function choke(t, rel) {
 function playVoice(name, t, o) {
   o = o || {};
   const ctx = audio(); if (!ctx || !name || !isChord(name)) return;
-  const snd = psettings().sound, vel = o.vel == null ? 1 : o.vel;
+  const snd = o.snd || psettings().sound, vel = o.vel == null ? 1 : o.vel;
   const g = ctx.createGain(); g.connect(master);
   const v = { g, srcs: [], start: t, end: t + 6 };
   if (snd === 'guitar') {
@@ -984,7 +1059,7 @@ $('#pads').addEventListener('pointercancel', padUp);
 $('#pads').addEventListener('pointerleave', padUp);
 // the computer keyboard
 document.addEventListener('keydown', e => {
-  if (!playOn || $('#ed').classList.contains('open') || $('#leg').classList.contains('open') || $('#lib').classList.contains('open')) return;
+  if (!playOn || $('#ed').classList.contains('open') || $('#leg').classList.contains('open') || $('#lib').classList.contains('open') || $('#kar').classList.contains('open') || $('#scr').classList.contains('open')) return;
   if (/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && e.target.type !== 'range') return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key === 'Shift') { shiftDown = true; return; }
@@ -1246,6 +1321,7 @@ function norm(s) {
   if (s.scrSpeed) o.scrSpeed = s.scrSpeed;
   if (s.scrDur) o.scrDur = s.scrDur;
   if (s.scrMode) o.scrMode = s.scrMode;
+  ['kar', 'karDrum', 'karCustom', 'karStyle'].forEach(k => { if (s[k] != null) o[k] = s[k]; });
   return o;
 }
 function load() {
@@ -1351,6 +1427,7 @@ function render() {
   fit();
   if (playOn) renderPads();
   if (typeof SCR !== 'undefined' && SCR.open) scrBuild();
+  if (typeof K !== 'undefined' && K.open && !K.playing) kBuild();
 }
 /* For the scroll view: a label with nothing under it ("CHORUS", "Repeat Chorus", "Chorus x2") gets the
    matching section written out again under it, since you can't glance back up while it scrolls. */
@@ -2053,6 +2130,315 @@ document.addEventListener('keydown', e => {
   else done = false;
   if (done) { e.preventDefault(); e.stopImmediatePropagation(); }
 }, true);
+
+/* ================= 🎤 Karaoke: drums + chords play in time; you teach it when the chords change ================= */
+const DRUMS = [   // steps per beat (spb), beats per bar (b); X = accent, x = normal, o = soft, r = rim click, O = open hi-hat
+  ['country', 'Country two-step', { b: 4, spb: 4, k: 'X.......X.......', s: '....X.......X...', h: 'x.x.x.x.x.x.x.x.' }],
+  ['train', 'Train beat', { b: 4, spb: 4, k: 'X.......X.......', s: 'ooooXoooooooXooo', h: '' }],
+  ['rock', 'Rock', { b: 4, spb: 4, k: 'X.....x.X.......', s: '....X.......X...', h: 'x.x.x.x.x.x.x.x.' }],
+  ['shuffle', 'Shuffle', { b: 4, spb: 3, k: 'X.....X.....', s: '...X.....X..', h: 'x.xx.xx.xx.x' }],
+  ['ballad', 'Ballad', { b: 4, spb: 4, k: 'X.......x.x.....', s: '....r.......r...', h: 'x.x.x.x.x.x.x.x.' }],
+  ['pop', 'Four on the floor', { b: 4, spb: 4, k: 'X...X...X...X...', s: '....X.......X...', h: '..O...O...O...O.' }],
+  ['half', 'Half-time', { b: 4, spb: 4, k: 'X.....x.........', s: '........X.......', h: 'x.x.x.x.x.x.x.x.' }],
+  ['waltz', 'Waltz (3/4)', { b: 3, spb: 4, k: 'X...........', s: '....x...x...', h: 'x.x.x.x.x.x.' }],
+  ['swing', 'Swing', { b: 4, spb: 3, k: 'o.....o.....', s: '...x.....x..', h: 'x..x.xx..x.x' }],
+  ['click', 'Click only', null],
+  ['none', 'No drums', null],
+];
+const K = { open: false, playing: false, teach: false, t0: 0, step: 0, timer: 0, raf: 0, idx: -2, seq: [], els: [], taps: [], dbus: null, noise: null, lastBeat: -99, songId: null };
+const kS = () => song();
+const kar = () => kS().kar || null;
+function kPattern() {
+  const s = kS(), id = s.karDrum || (beatsPerBar() === 3 ? 'waltz' : 'country');
+  if (id === 'custom' && s.karCustom) return Object.assign({ id: 'custom', nm: 'Custom' }, s.karCustom);
+  const d = DRUMS.find(x => x[0] === id) || DRUMS[0];
+  const b = d[2] ? d[2].b : beatsPerBar();
+  return Object.assign({ id: d[0], nm: d[1], b, spb: 4, k: '', s: '', h: '' }, d[2] || {}, d[0] === 'click' ? { click: true } : {});
+}
+const kBeatDur = () => 60 / tempoNow();
+const kStyle = () => kS().karStyle || 'strum';
+const kCV = () => settings.karCV == null ? 0.8 : settings.karCV;
+const kDV = () => settings.karDV == null ? 0.7 : settings.karDV;
+/* ---- drum sounds (synthesized) ---- */
+function kNoise() {
+  if (K.noise) return K.noise;
+  const b = actx.createBuffer(1, actx.sampleRate, actx.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  return K.noise = b;
+}
+function drumHit(type, t, vel) {
+  const ctx = actx; if (!K.dbus) { K.dbus = ctx.createGain(); K.dbus.connect(master); }
+  K.dbus.gain.value = kDV();
+  const g = ctx.createGain(); g.connect(K.dbus);
+  const env = (peak, dur) => { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), t + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); };
+  const noise = (hp, bp) => { const n = ctx.createBufferSource(); n.buffer = kNoise(); const f = ctx.createBiquadFilter(); f.type = bp ? 'bandpass' : 'highpass'; f.frequency.value = hp; n.connect(f); f.connect(g); n.start(t, Math.random() * 0.5); return n; };
+  if (type === 'k') { const o = ctx.createOscillator(); o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12); o.connect(g); env(0.95 * vel, 0.33); o.start(t); o.stop(t + 0.36); }
+  else if (type === 's') { const n = noise(1400); env(0.55 * vel, 0.17); n.stop(t + 0.2); const o = ctx.createOscillator(), og = ctx.createGain(); o.type = 'triangle'; o.frequency.value = 190; og.gain.setValueAtTime(0.35 * vel, t); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.08); o.connect(og); og.connect(K.dbus); o.start(t); o.stop(t + 0.1); }
+  else if (type === 'r') { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = 1750; const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1750; o.connect(f); f.connect(g); env(0.35 * vel, 0.035); o.start(t); o.stop(t + 0.05); }
+  else if (type === 'h' || type === 'O') { const n = noise(7500); const d = type === 'O' ? 0.28 : 0.045; env(0.32 * vel, d); n.stop(t + d + 0.02); }
+  else if (type === 'c') { const o = ctx.createOscillator(); o.frequency.value = vel > 0.9 ? 1600 : 1050; o.connect(g); env(0.4 * vel, 0.04); o.start(t); o.stop(t + 0.05); }
+}
+const VEL = { X: 1, x: 0.72, o: 0.32, r: 0.8, O: 0.8 };
+/* ---- the song's chord sequence = the chords in the karaoke view, in order (repeats written out) ---- */
+function kBuild() {
+  if (!K.open) return;
+  const s = kS(), D = $('#karDoc');
+  D.innerHTML = songRowsHTML(s, expandRepeats(s));
+  D.style.fontSize = (settings.karSize || Math.round(Math.max(20, Math.min(36, innerWidth / 22)))) + 'px';
+  markBoxes(D); wrapBlocks(D);
+  K.els = [...D.querySelectorAll('.ch')].filter(e => e.textContent.trim());
+  K.seq = K.els.map(e => e.textContent.trim());
+  K.idx = -2; K.songId = s.id;
+  $('#karTitle').textContent = s.title || 'Untitled';
+  // warm up the guitar samples so the first strums don't stutter
+  if (actx) setTimeout(() => [...new Set(K.seq)].forEach(c => { const sh = shapeFor(c); if (sh) sh.forEach((f, i) => { if (f >= 0) pluck(TUNING[i] + f); }); }), 30);
+  kPaint();
+}
+function kEvents() { const k = kar(); return k && Array.isArray(k.ev) ? k.ev : []; }
+function kEnd() { const k = kar(), ev = kEvents(); return k && k.end ? k.end : ev.length ? ev[ev.length - 1] + kPattern().b * 2 : 0; }
+function kIdxAt(beat) { const ev = kEvents(); let i = -1; for (let j = 0; j < ev.length; j++) { if (ev[j] <= beat + 1e-6) i = j; else break; } return i; }
+/* ---- playback scheduler ---- */
+function kStart(fromBeat, teach) {
+  const ctx = audio(); if (!ctx) return;
+  kStop(true);
+  const P = kPattern(), bd = kBeatDur(), count = (settings.karCount == null ? 1 : settings.karCount) * P.b;
+  fromBeat = Math.max(0, fromBeat || 0);
+  K.teach = !!teach; K.taps = teach ? [] : K.taps;
+  K.t0 = ctx.currentTime + 0.12 + count * bd - fromBeat * bd;       // the time of beat 0
+  K.step = Math.round((fromBeat - count) * P.spb);
+  K.playing = true; K.lastChordIdx = -9;
+  K.timer = setInterval(kTick, 25); kTick();
+  if (!K.raf) K.raf = requestAnimationFrame(kFrame);
+  scrWakeK(true); kPaint();
+}
+function kStop(quiet) {
+  clearInterval(K.timer); K.timer = 0;
+  if (actx) choke(actx.currentTime, 0.06);
+  const was = K.playing; K.playing = false;
+  if (!quiet) { K.teach = false; scrWakeK(false); kPaint(); }
+  return was;
+}
+function kTick() {
+  if (!K.playing) return;
+  const P = kPattern(), bd = kBeatDur(), sd = bd / P.spb, steps = P.b * P.spb, ev = kEvents(), end = kEnd();
+  const evSteps = ev.map(b => Math.round(b * P.spb));
+  while (K.t0 + K.step * sd < actx.currentTime + 0.12) {
+    const st = K.step, t = Math.max(actx.currentTime, K.t0 + st * sd), beat = st / P.spb, pos = ((st % steps) + steps) % steps;
+    if (!K.teach && ev.length && beat >= end) { const e = (K.t0 + end * bd - actx.currentTime) * 1000; setTimeout(() => { if (K.playing) { kStop(); toast('End of the song'); } }, Math.max(0, e + 600)); K.step = Infinity; break; }
+    // drums (count-in = clicks on the beat)
+    if (beat < 0 || P.click) { if (pos % P.spb === 0 && P.id !== 'none') drumHit('c', t, pos === 0 ? 1 : 0.6); }
+    else if (P.id !== 'none') {
+      const h = (P.h || '')[pos], k = (P.k || '')[pos], s = (P.s || '')[pos];
+      if (k && k !== '.') drumHit('k', t, VEL[k] || 0.7);
+      if (s && s !== '.') drumHit(s === 'r' ? 'r' : 's', t, VEL[s] || 0.7);
+      if (h && h !== '.') drumHit(h === 'O' ? 'O' : 'h', t, VEL[h] || 0.6);
+    }
+    // chords
+    if (!K.teach && beat >= 0 && ev.length && kStyle() !== 'off') {
+      let i = -1; for (let j = 0; j < evSteps.length; j++) { if (evSteps[j] <= st) i = j; else break; }
+      if (i >= 0) {
+        const name = K.seq[i], changed = evSteps[i] === st, onBeat = st % P.spb === 0, bInBar = Math.floor(pos / P.spb), cv = kCV(), style = kStyle();
+        const nextStep = i + 1 < evSteps.length ? evSteps[i + 1] : Math.round(end * P.spb);
+        if (style === 'pad' || style === 'organ') {
+          if (changed) { choke(t, 0.05); playVoice(name, t, { snd: style === 'organ' ? 'organ' : 'keys', vel: cv * 1.1, gate: Math.max(0.1, (nextStep - st) * sd - 0.04) }); }
+        } else if (style === 'boom') {
+          if (onBeat || changed) {
+            const bass = bInBar % 2 === 0 && (onBeat || changed);
+            if (bass) { choke(t, 0.03); kBass(name, t, bInBar === 0 || changed ? 0 : 7, cv); }
+            else { playVoice(name, t, { snd: 'guitar', vel: cv * 0.85, gate: bd * 0.5, tight: true }); }
+          }
+        } else {   // strum: down on every beat, light up-strum on the "and"
+          const half = P.spb % 2 === 0 && st % P.spb === P.spb / 2;
+          if (onBeat || changed) { choke(t, 0.02); playVoice(name, t, { snd: 'guitar', vel: cv * (bInBar === 0 || changed ? 1 : 0.8), gate: bd * 0.95, tight: true }); }
+          else if (half && settings.karUp !== false) playVoice(name, t, { snd: 'guitar', up: true, vel: cv * 0.45, gate: bd * 0.45, tight: true });
+        }
+      }
+    }
+    K.step++;
+  }
+}
+function kBass(name, t, interval, vel) {      // single low note: the chord's bass (or its 5th)
+  const ch = parseChord(name); if (!ch) return;
+  let m = keyVoicing(name)[0]; if (interval) m = m + 7 - (m + 7 > 52 ? 12 : 0);
+  const src = actx.createBufferSource(); src.buffer = pluck(m);
+  const g = actx.createGain(); g.gain.value = 0.55 * vel; src.connect(g); g.connect(master); src.start(t);
+  voices.push({ g, srcs: [src], start: t, end: t + 6 });
+}
+/* ---- what's on screen ---- */
+function kFrame() {
+  K.raf = 0;
+  if (!K.open) return;
+  if (K.playing) {
+    const beat = (actx.currentTime - K.t0) / kBeatDur(), P = kPattern();
+    const cnt = $('#karCount');
+    if (beat < 0) { cnt.textContent = Math.ceil(-beat); cnt.classList.add('on'); } else cnt.classList.remove('on');
+    const bInBar = beat >= 0 ? Math.floor(beat) % P.b : -1;
+    if (bInBar !== K.lastBeat) { K.lastBeat = bInBar; const dots = $('#karDots'); if (dots.children.length !== P.b) dots.innerHTML = '<i></i>'.repeat(P.b); [...dots.children].forEach((d, i) => d.className = i === bInBar ? (i ? 'b' : 'a') : ''); }
+    const i = K.teach ? K.taps.length - 1 : kIdxAt(beat);
+    if (i !== K.idx) kHighlight(i);
+    K.raf = requestAnimationFrame(kFrame);
+  }
+}
+function kHighlight(i) {
+  K.idx = i;
+  K.els.forEach((e, j) => { e.classList.toggle('kon', j === i); e.classList.toggle('knext', K.teach && j === i + 1); });
+  document.querySelectorAll('#karDoc .kcur').forEach(r => r.classList.remove('kcur'));
+  const focus = K.els[K.teach ? i + 1 : i] || K.els[i];
+  const row = focus && focus.closest('.row');
+  if (row) { row.classList.add('kcur'); const v = $('#karView'); v.scrollTo({ top: Math.max(0, row.offsetTop - v.clientHeight * 0.32), behavior: 'smooth' }); }
+  const cur = K.seq[i], nxt = K.seq[i + 1];
+  const chip = (c, cls) => c ? `<b class="${cls} rc"${hueAttr(c)}>${esc(c)}</b>` : `<b class="${cls}">–</b>`;
+  $('#karNowC').innerHTML = K.teach ? `<span class="lbl">tap for</span>${chip(nxt, 'big')}<span class="lbl">${i + 2} of ${K.seq.length}</span>`
+    : `${chip(cur, 'big')}<span class="lbl">next</span>${chip(nxt, 'sm')}`;
+}
+function kPaint() {
+  if (!K.open) return;
+  const ev = kEvents(), n = K.seq.length, k = kar(), P = kPattern();
+  $('#karPlay').textContent = K.playing && !K.teach ? '❚❚' : '▶';
+  $('#karPlay').classList.toggle('on', K.playing && !K.teach);
+  $('#karTempo').textContent = tempoNow();
+  $('#karDrum').textContent = '🥁 ' + P.nm;
+  $('#kar').classList.toggle('teaching', K.teach);
+  let msg = '';
+  if (!n) msg = 'This song has no chords yet. Add chords first, then come back here.';
+  else if (!ev.length) msg = 'Not taught yet. Tap <b>● Teach</b>, then tap every time the chord changes. (Or ⚙ → “Rough timing” for a quick start.)';
+  else if (k && k.n !== n) msg = 'The chords in this song changed since you taught it. Playback may be off — tap <b>● Teach</b> to redo it.';
+  $('#karMsg').innerHTML = msg; $('#karMsg').style.display = msg && !K.playing ? 'block' : 'none';
+  if (!K.playing) { $('#karNowC').innerHTML = n ? `<b class="big rc"${hueAttr(K.seq[0])}>${esc(K.seq[0])}</b><span class="lbl">${ev.length ? `taught · ${Math.round(kEnd() / P.b)} bars` : 'not taught yet'}</span>` : ''; K.idx = -2; K.els.forEach(e => e.classList.remove('kon', 'knext')); }
+}
+async function scrWakeK(on) { try { if (on && 'wakeLock' in navigator && !K.wl) { K.wl = await navigator.wakeLock.request('screen'); K.wl.addEventListener('release', () => K.wl = null); } if (!on && K.wl) { await K.wl.release(); K.wl = null; } } catch (e) {} }
+/* ---- teaching ---- */
+function kTeachStart() {
+  if (!K.seq.length) { toast('Add chords to this song first'); return; }
+  $('#karSheet').classList.remove('open');
+  kStart(0, true); kHighlight(-1);
+}
+function kTap() {
+  if (!K.teach || !K.playing) return;
+  const bd = kBeatDur(), q = settings.karQ == null ? 0.5 : settings.karQ;
+  let b = (actx.currentTime - K.t0 - 0.03) / bd;       // a little allowance for reaction time
+  if (b < 0) b = 0;
+  if (q) b = Math.round(b / q) * q;
+  if (K.taps.length && b <= K.taps[K.taps.length - 1]) b = K.taps[K.taps.length - 1] + (q || 0.25);
+  if (K.taps.length < K.seq.length) {
+    K.taps.push(b);
+    playVoice(K.seq[K.taps.length - 1], actx.currentTime + 0.005, { snd: 'guitar', vel: kCV(), gate: bd * 1.5 });
+    kHighlight(K.taps.length - 1);
+    if (K.taps.length === K.seq.length) { $('#karTapBtn').innerHTML = '■ Tap at the very end of the song'; }
+  } else kTeachDone(b);
+}
+function kTeachUndo() { if (!K.teach || !K.taps.length) return; K.taps.pop(); kHighlight(K.taps.length - 1); $('#karTapBtn').innerHTML = 'TAP<small>when the chord changes</small>'; }
+function kTeachDone(endBeat) {
+  if (!K.teach) return;
+  const P = kPattern(), taps = K.taps.slice();
+  const b = endBeat != null ? endBeat : (actx.currentTime - K.t0) / kBeatDur();
+  kStop();
+  if (!taps.length) { toast('Nothing tapped — timing not changed'); return; }
+  const s = kS();
+  s.kar = { ev: taps, end: Math.max(taps[taps.length - 1] + 1, Math.ceil(b / P.b) * P.b), n: K.seq.length };
+  if (!s.karDrum) s.karDrum = P.id;
+  save(); kBuild();
+  toast(taps.length < K.seq.length ? `Saved ${taps.length} of ${K.seq.length} chord changes. Press ▶ to hear it` : 'Timing saved! Press ▶ to play it back', 4000);
+  $('#karTapBtn').innerHTML = 'TAP<small>when the chord changes</small>';
+}
+function kRough() {            // quick start: one bar per chord
+  const P = kPattern(), s = kS();
+  s.kar = { ev: K.seq.map((_, i) => i * P.b), end: K.seq.length * P.b + P.b, n: K.seq.length };
+  save(); kBuild(); toast('Rough timing: one bar per chord. Teach it for the real thing.');
+}
+/* ---- open / close ---- */
+function openKar() { setSel(null); audio(); K.open = true; $('#kar').classList.add('open'); kBuild(); }
+function closeKar() { kStop(); K.open = false; $('#kar').classList.remove('open'); $('#karSheet').classList.remove('open'); }
+function kPlayToggle() {
+  if (K.teach) { kTeachDone(); return; }
+  if (K.playing) { K.resumeBeat = Math.max(0, (actx.currentTime - K.t0) / kBeatDur()); kStop(); return; }
+  if (!kEvents().length) { toast(K.seq.length ? 'Tap ● Teach first (or ⚙ → Rough timing)' : 'Add chords to this song first'); return; }
+  const P = kPattern(); const from = K.resumeBeat ? Math.floor(K.resumeBeat / P.b) * P.b : 0;   // resume from the start of the bar
+  K.resumeBeat = 0; kStart(from);
+}
+/* ---- options sheet ---- */
+function kSheet() {
+  const s = kS(), P = kPattern(), st = kStyle();
+  const o = (k, v, label, cur) => `<button data-kk="${k}" data-kv="${v}" class="${String(cur) === String(v) ? 'sel' : ''}">${label}</button>`;
+  const grid = P.id !== 'click' && P.id !== 'none' ? ['k', 's', 'h'].map(r => `<div class="grow"><span>${{ k: 'Kick', s: 'Snare', h: 'Hi-hat' }[r]}</span>${Array.from({ length: P.b * P.spb }, (_, i) => { const c = (P[r] || '')[i] || '.'; return `<button class="cell c${c === '.' ? '0' : c === 'X' || c === 'O' ? '2' : '1'}${i % P.spb === 0 ? ' beat' : ''}" data-r="${r}" data-i="${i}">${c === '.' ? '' : c === 'r' ? 'r' : c === 'O' ? 'o' : ''}</button>`; }).join('')}</div>`).join('') : '';
+  $('#karSheet').innerHTML = `<div class="sh1"><b>Karaoke options</b><button id="karSheetX">✕</button></div>
+  <h5>Drum pattern</h5><div class="o">${DRUMS.map(([id, nm]) => o('drum', id, nm, P.id)).join('')}${s.karCustom ? o('drum', 'custom', '★ ' + esc(s.karCustom.nm || 'My pattern'), P.id) : ''}</div>
+  ${grid ? `<h5>Edit the pattern (tap squares: off → on → loud) <span class="note">${P.id === 'custom' ? '' : 'saves as your own pattern for this song'}</span></h5><div class="grid">${grid}</div>` : ''}
+  <h5>Chords</h5><div class="o">${o('style', 'strum', 'Guitar strum', st)}${o('style', 'boom', 'Boom-chick (bass + strum)', st)}${o('style', 'pad', 'Keys (held)', st)}${o('style', 'organ', 'Organ (held)', st)}${o('style', 'off', 'Drums only', st)}</div>
+  <h5>Tempo</h5><div class="o"><button data-tp="-5">−5</button><button data-tp="-1">−1</button><b class="val">${tempoNow()} bpm</b><button data-tp="1">+1</button><button data-tp="5">+5</button><button id="karTapT">Tap tempo</button></div>
+  <h5>Mix</h5><div class="o mix"><label>Drums <input type="range" min="0" max="1" step="0.05" value="${kDV()}" data-mix="karDV"></label><label>Chords <input type="range" min="0" max="1" step="0.05" value="${kCV()}" data-mix="karCV"></label></div>
+  <h5>Count-in before it starts</h5><div class="o">${[0, 1, 2].map(n => o('count', n, n ? n + (n > 1 ? ' bars' : ' bar') : 'None', settings.karCount == null ? 1 : settings.karCount)).join('')}</div>
+  <h5>When teaching, snap my taps to</h5><div class="o">${o('q', 0.5, 'Half beats', settings.karQ == null ? 0.5 : settings.karQ)}${o('q', 1, 'Whole beats', settings.karQ == null ? 0.5 : settings.karQ)}${o('q', 0, 'Exactly where I tap', settings.karQ == null ? 0.5 : settings.karQ)}</div>
+  <h5>Lyrics size</h5><div class="o"><button data-ks="-2">A−</button><button data-ks="2">A+</button></div>
+  <h5>Timing</h5><div class="o"><button id="karRough">Rough timing: one bar per chord</button><button id="karClear" class="dng">Clear this song's timing</button></div>
+  <p class="note">Keys / pedal: Space = play · pause (while teaching: tap) · Page Down / → / Enter also tap · Backspace = undo a tap · Esc = stop. Tap any line to start from there.</p>`;
+  $('#karSheet').classList.add('open');
+}
+$('#karSheet').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const s = kS();
+  if (b.id === 'karSheetX') { $('#karSheet').classList.remove('open'); return; }
+  if (b.id === 'karRough') { kRough(); kSheet(); return; }
+  if (b.id === 'karClear') { if (confirm('Clear the chord timing for this song?')) { delete s.kar; save(); kBuild(); kSheet(); } return; }
+  if (b.id === 'karTapT') { tapTempo(); kPaint(); kSheet(); return; }
+  if (b.dataset.tp) { setTempo(tempoNow() + +b.dataset.tp); kPaint(); kSheet(); return; }
+  if (b.dataset.ks) { settings.karSize = Math.max(14, Math.min(64, (parseFloat($('#karDoc').style.fontSize) || 26) + +b.dataset.ks)); quietSave(); kBuild(); return; }
+  if (b.dataset.r) {                // edit a drum step → becomes this song's own pattern
+    const P = kPattern(), r = b.dataset.r, i = +b.dataset.i, row = (P[r] || '').padEnd(P.b * P.spb, '.').split('');
+    row[i] = { '.': 'x', x: 'X', o: 'x', X: '.', r: '.', O: '.' }[row[i]] || '.';
+    const c = { nm: P.id === 'custom' ? P.nm : 'My ' + P.nm, b: P.b, spb: P.spb, k: P.k || '', s: P.s || '', h: P.h || '' }; c[r] = row.join('');
+    s.karCustom = c; s.karDrum = 'custom'; quietSave(); kPaint(); kSheet(); return;
+  }
+  const k = b.dataset.kk, v = b.dataset.kv; if (!k) return;
+  if (k === 'drum') s.karDrum = v;
+  if (k === 'style') s.karStyle = v;
+  if (k === 'count') settings.karCount = +v;
+  if (k === 'q') settings.karQ = +v;
+  quietSave(); kPaint(); kSheet();
+});
+$('#karSheet').addEventListener('input', e => { const m = e.target.dataset.mix; if (m) { settings[m] = +e.target.value; if (K.dbus) K.dbus.gain.value = kDV(); quietSave(); } });
+/* ---- buttons, taps, keys ---- */
+$('#bKar').onclick = openKar;
+$('#fKar').onclick = () => { setShow(false); openKar(); };
+$('#karClose').onclick = closeKar;
+$('#karPlay').onclick = kPlayToggle;
+$('#karTop').onclick = () => { K.resumeBeat = 0; if (K.playing && !K.teach) kStart(0); else { kStop(); kPaint(); $('#karView').scrollTop = 0; } };
+$('#karTeach').onclick = () => { if (K.teach) kTeachDone(); else if (!kEvents().length || confirm('Re-teach this song? Your new taps will replace the old timing.')) kTeachStart(); };
+$('#karTapBtn').addEventListener('pointerdown', e => { e.preventDefault(); kTap(); });
+$('#karUndo').onclick = kTeachUndo;
+$('#karDone').onclick = () => kTeachDone();
+$('#karSet').onclick = () => $('#karSheet').classList.contains('open') ? $('#karSheet').classList.remove('open') : kSheet();
+$('#karDrum').onclick = kSheet;
+$('#karTempoBox').onclick = kSheet;
+$('#karPrev').onclick = () => { kStop(); nav(-1); kBuild(); };
+$('#karNext').onclick = () => { kStop(); nav(1); kBuild(); };
+$('#karView').addEventListener('click', e => {        // tap a line to start from there
+  if (K.teach || $('#karSheet').classList.contains('open')) { $('#karSheet').classList.remove('open'); return; }
+  const row = e.target.closest('.row'); if (!row || !kEvents().length) return;
+  const idx = K.els.findIndex(el => row.contains(el) || (row.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING));
+  if (idx < 0) return;
+  const ev = kEvents(), P = kPattern(), b = ev[Math.min(idx, ev.length - 1)];
+  kStart(Math.floor(b / P.b) * P.b);
+});
+document.addEventListener('keydown', e => {
+  if (!K.open || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  const k = e.key; let done = true;
+  if (K.teach) {
+    if ([' ', 'Enter', 'PageDown', 'ArrowRight', 'ArrowDown'].includes(k)) { if (!e.repeat) kTap(); }
+    else if (k === 'Backspace' || k === 'ArrowLeft' || k === 'PageUp') kTeachUndo();
+    else if (k === 'Escape') kTeachDone();
+    else done = false;
+  } else {
+    if (k === ' ' || k === 'Enter') kPlayToggle();
+    else if (k === 'Escape') { if ($('#karSheet').classList.contains('open')) $('#karSheet').classList.remove('open'); else if (K.playing) kStop(); else closeKar(); }
+    else if (k === 'Home') $('#karTop').click();
+    else if (k === 'ArrowRight' || k === 'PageDown') $('#karNext').click();
+    else if (k === 'ArrowLeft' || k === 'PageUp') $('#karPrev').click();
+    else done = false;
+  }
+  if (done) { e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+window.addEventListener('resize', () => { if (K.open && !K.playing) kBuild(); });
 
 /* ================= toolbar ================= */
 $('#bPrev').onclick = () => nav(-1);
