@@ -77,6 +77,16 @@ body.cloud .cloudOnly{display:inline-block!important}
 #stage{position:absolute;left:50%;top:50%;width:1920px;height:1080px;transform-origin:center center;background:var(--stage);padding:34px 56px 40px;display:flex;flex-direction:column}
 #hdr{display:flex;align-items:baseline;gap:28px;border-bottom:2px solid var(--rule);padding-bottom:12px;margin-bottom:22px;flex:none}
 #title{font-size:58px;font-weight:800;color:var(--lyric);line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body{--hl1:#c792ff;--hl2:#ffa94d;--hl3:#69db7c;--hl4:#74c0fc;--hl5:#ff6b6b}
+body.light,body.th-sepia{--hl1:#7b2cbf;--hl2:#d9480f;--hl3:#2b8a3e;--hl4:#1864ab;--hl5:#c92a2a}
+.hl-h1{--hlc:var(--hl1)}.hl-h2{--hlc:var(--hl2)}.hl-h3{--hlc:var(--hl3)}.hl-h4{--hlc:var(--hl4)}.hl-h5{--hlc:var(--hl5)}
+.ln.hl .ly{color:var(--hlc);font-weight:650}
+#hlLeg{display:flex;gap:18px;font-size:26px;white-space:nowrap}
+.hlk{color:var(--hlc);font-weight:700}
+#scrDoc .scrHead .leg{display:flex;gap:12px;flex-wrap:wrap;font-size:.6em;margin-top:.2em}
+#panel .hlb{border:2px solid transparent}
+#panel .hlb.on{border-color:#fff}
+#panel .hlb i{font-style:normal;color:var(--hlc)}
 #artist{font-size:34px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
 #key{font-size:36px;font-weight:700;color:var(--chord);white-space:nowrap}
 #diag{flex:none;display:none;justify-content:center;align-items:flex-end;gap:18px;border-top:2px solid var(--rule);padding-top:10px;margin-top:10px;overflow:hidden}
@@ -300,6 +310,9 @@ body.light #scrBar,body.th-sepia #scrBar{background:rgba(0,0,0,.06)}
 #scrSheet .note{font-size:12.5px;color:#8a9099;margin-left:6px}
 #scrSheet p.note{margin:14px 0 0}
 #stylePop{z-index:30}
+#styleBox .hlnames label{display:inline-flex;align-items:center;gap:6px}
+#styleBox .hlnames i{font-style:normal;color:var(--hlc);font-size:18px}
+#styleBox .hlnames input{width:120px;background:#0f1115;border:1px solid #444;color:#eee;border-radius:7px;padding:6px 8px;font-size:14px}
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#2f6fed;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:30}
 #toast.show{opacity:1}
 </style>
@@ -332,7 +345,7 @@ body.light #scrBar,body.th-sepia #scrBar{background:rgba(0,0,0,.06)}
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v25</span>
+  <span class="lbl" title="App version">v26</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -358,7 +371,7 @@ body.light #scrBar,body.th-sepia #scrBar{background:rgba(0,0,0,.06)}
 
 <div id="viewport">
   <div id="stage">
-    <div id="hdr"><div id="title"></div><div id="artist"></div><div id="key"></div></div>
+    <div id="hdr"><div id="title"></div><div id="artist"></div><div id="hlLeg"></div><div id="key"></div></div>
     <div id="body"></div>
     <div id="diag"></div>
   </div>
@@ -1174,6 +1187,7 @@ async function exportImage() {
     maxX = Math.max(maxX, b.x);
   };
   draw($('#title'), true); draw($('#artist'), true); draw($('#key'));
+  document.querySelectorAll('#hlLeg .hlk').forEach(el => draw(el));
   const clear = c => !c || c === 'transparent' || /rgba\([^)]*,\s*0\)$/.test(c);
   const rr = (x, y, w, h, r) => { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); };
   st.querySelectorAll('#body .blk').forEach(el => {      // section backgrounds, boxes and bars
@@ -1295,6 +1309,14 @@ const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(
 const ROOT_HUE = [45, 200, 330, 130, 22, 272, 172, 0, 92, 238, 300, 186];   // by position on the circle of fifths
 function rootHue(name) { const m = String(name || '').match(/^\(?([A-G][#b♯♭]?)/); if (!m) return null; const pc = IDX[m[1].replace('♯', '#').replace('♭', 'b')]; return pc == null ? null : ROOT_HUE[(pc * 7) % 12]; }
 const hueAttr = name => { const h = rootHue(name); return h == null ? '' : ` style="--h:${h}"`; };
+/* line colors: mark whole lines (e.g. "needs harmony"); names are editable in 🎨 Style */
+const HL = ['h1', 'h2', 'h3', 'h4', 'h5'];
+const HL_DEFAULT = { h1: 'Harmony', h2: 'Lead', h3: 'Everyone', h4: 'Soft', h5: 'Watch out' };
+const hlName = k => (settings.hlNames && settings.hlNames[k]) || HL_DEFAULT[k];
+function hlLegendHTML(s) {
+  const used = HL.filter(k => s.lines.some(L => L.hl === k));
+  return used.map(k => `<span class="hlk hl-${k}"><i>●</i> ${esc(hlName(k))}</span>`).join('');
+}
 function lineHTML(L, l, s) {
   const toks = L.toks;
   const hasC = toks.some(k => k.c), hasT = toks.some(k => k.t);
@@ -1308,13 +1330,14 @@ function lineHTML(L, l, s) {
   });
   if (open) html += '</span>';
   html += `<span class="add" data-l="${l}"><b data-add="${l}">＋</b></span>`;
-  const cls = 'row ln' + (hasC ? '' : ' noch') + (hasT ? '' : ' only') + (toks.length ? '' : ' empty');
+  const cls = 'row ln' + (L.hl ? ' hl hl-' + L.hl : '') + (hasC ? '' : ' noch') + (hasT ? '' : ' only') + (toks.length ? '' : ' empty');
   return `<div class="${cls}">${html}</div>`;
 }
 function render() {
   const s = song();
   const n = s.transpose | 0, key = s.key;
   $('#title').textContent = s.title || 'Untitled';
+  $('#hlLeg').innerHTML = hlLegendHTML(s);
   $('#artist').textContent = s.artist || '';
   $('#key').textContent = key ? 'Key: ' + disp(s, key) + (n ? `  (orig ${key})` : '') : (n ? `Transposed ${n > 0 ? '+' : ''}${n}` : '');
   const html = songRowsHTML(s);
@@ -1476,6 +1499,7 @@ const KEYCHORDS = k => {
 };
 const ROOTS = ['C','C#','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
 const QUALS = [['', 'maj'], ['m', 'm'], ['7', '7'], ['m7', 'm7'], ['maj7', 'maj7'], ['sus4', 'sus4'], ['sus2', 'sus2'], ['6', '6'], ['9', '9'], ['dim', 'dim'], ['aug', 'aug']];
+function curLine() { const L = sel && song().lines[sel.l]; return L && L.k === 'line' ? L : null; }
 function curTok() { const L = song().lines[sel.l]; return L && L.k === 'line' ? L.toks[sel.i] : null; }
 function setChord(v) {
   const k = curTok(); if (!k) return;
@@ -1520,6 +1544,7 @@ function buildPanel(focus) {
     <button data-act="clear">Remove</button>
     <button data-act="prev">◀ Prev</button><button data-act="next" class="pri">Next word ▶</button><button data-act="done">Done</button>
     ${k.c ? '<span class="psp"></span><button data-act="mvl" title="Move this chord to the word before (Alt+←)">⇠ Move chord</button><button data-act="mvr" title="Move this chord to the next word (Alt+→)">Move chord ⇢</button>' : ''}</div>
+  <div class="prow"><span class="lbl">Line color</span>${['', ...HL].map(h => `<button class="hlb${(curLine() && (curLine().hl || '') === h) ? ' on' : ''}${h ? ' hl-' + h : ''}" data-hl="${h || 'none'}">${h ? `<i>●</i> ${esc(hlName(h))}` : 'None'}</button>`).join('')}<button data-act="hldown" title="Same color on the next line">⇣ Next line</button></div>
   <div class="prow palrow"><span class="lbl">Song chords</span>
     ${editingPal ? `<input id="palIn" class="wide" value="${esc(pal.join(' '))}" placeholder="e.g. C C7 F G G7" autocapitalize="characters" spellcheck="false"><button data-act="palsave" class="pri">Save list</button><button data-act="palcancel">Cancel</button>`
       : (pal.length ? pal.map(chip).join('') : '<span class="hint">None set yet</span>') + `<button data-act="paledit" class="q">✎ ${s.palette && s.palette.length ? 'Edit list' : 'Set list'}</button>`}
@@ -1556,7 +1581,16 @@ $('#panel').addEventListener('click', e => {
     return;
   }
   if (b.dataset.lab) { s.lines[sel.l].t = b.dataset.lab; $('#lIn').value = b.dataset.lab; save(); render(); return; }
+  if (b.dataset.hl) { const L = curLine(); if (L) { if (b.dataset.hl === 'none') delete L.hl; else L.hl = b.dataset.hl; save(); render(); buildPanel(); } return; }
   const a = b.dataset.act;
+  if (a === 'hldown') {     // jump to the next lyric line and give it the same color
+    const L = curLine(); if (!L) return;
+    const lines = song().lines; let j = sel.l + 1;
+    while (j < lines.length && !(lines[j].k === 'line' && lines[j].toks.some(k => k.t))) j++;
+    if (j >= lines.length) return;
+    if (L.hl) lines[j].hl = L.hl; else delete lines[j].hl;
+    cleanup(); sel = { l: j, i: 0 }; save(); render(); buildPanel(); return;
+  }
   if (a === 'mvl' || a === 'mvr') { nudgeChord(a === 'mvl' ? -1 : 1); return; }
   if (a === 'stamp') { stampOn = !stampOn; brush = stampOn ? (($('#cIn') && $('#cIn').value.trim()) || null) : null; buildPanel(); toast(stampOn ? 'Stamp on: pick a chord, then click words' : 'Stamp off'); return; }
   if (a === 'erase') { brush = ''; buildPanel(); return; }
@@ -1721,6 +1755,9 @@ $('#eSave').onclick = () => {
     });
   }
   else {
+    const keyOf = L => L.k === 'line' ? L.toks.map(k => k.t).join(' ').toLowerCase().replace(/\s+/g, ' ').trim() : null;
+    const oldHl = {}; song().lines.forEach(L => { const k = keyOf(L); if (k && L.hl) oldHl[k] = L.hl; });
+    data.lines.forEach(L => { const k = keyOf(L); if (k && oldHl[k]) L.hl = oldHl[k]; });
     Object.assign(song(), data); if (!data.palette) delete song().palette;
     const id = song().id;
     playlists.forEach(p => { const has = p.ids.includes(id); if (plChecks.has(p.id) && !has) p.ids.push(id); if (!plChecks.has(p.id) && has) p.ids = p.ids.filter(x => x !== id); });
@@ -1828,7 +1865,7 @@ function scrBuild() {
   const s = scrSong(), st = scrS(), v = $('#scrView'), D = $('#scrDoc');
   const same = SCR.songId === s.id, keep = v.scrollTop;
   const key = s.key ? 'Key: ' + disp(s, s.key) : '';
-  D.innerHTML = `<div class="scrHead"><div class="t">${esc(s.title || 'Untitled')}</div><div class="a">${esc([s.artist, key].filter(Boolean).join(' · '))}</div></div>` + songRowsHTML(s, st.scrExpand === false ? null : expandRepeats(s));
+  D.innerHTML = `<div class="scrHead"><div class="t">${esc(s.title || 'Untitled')}</div><div class="a">${esc([s.artist, key].filter(Boolean).join(' · '))}</div><div class="leg">${hlLegendHTML(s)}</div></div>` + songRowsHTML(s, st.scrExpand === false ? null : expandRepeats(s));
   D.style.setProperty('--sp', ({ tight: '0em', normal: '.15em', roomy: '.4em' })[st.scrSpace || 'normal']);
   // text size; "shrink" mode makes the longest line fit the screen width instead of wrapping
   let fs = st.scrSize;
@@ -2064,7 +2101,9 @@ function renderStyleBox() {
     <h4>Lyrics</h4><div class="opts"><button class="${!settings.bold ? 'sel' : ''}" data-bo="0">Regular</button><button class="${settings.bold ? 'sel' : ''}" data-bo="1">Bold</button></div>
     <h4>Font</h4><div class="opts">${[['sans', 'Clean', 'system-ui,sans-serif'], ['condensed', 'Condensed (fits bigger)', '"Avenir Next Condensed","Roboto Condensed","Arial Narrow",sans-serif'], ['serif', 'Songbook serif', 'Georgia,serif'], ['rounded', 'Rounded', 'ui-rounded,"Arial Rounded MT Bold","Trebuchet MS",sans-serif'], ['mono', 'Typewriter', 'ui-monospace,Menlo,monospace']]
       .map(([id, nm, ff]) => `<button class="${(settings.font || 'sans') === id ? 'sel' : ''}" data-ft="${id}" style="font-family:${ff.replace(/"/g, '&quot;')}">${nm}</button>`).join('')}</div>
+    <h4>Line color names</h4><div class="opts hlnames">${HL.map(k => `<label class="hl-${k}"><i>●</i><input data-hln="${k}" value="${esc(hlName(k))}" maxlength="18"></label>`).join('')}</div>
     <div class="note">Section colors:${key}</div>`;
+  $('#styleBox').querySelectorAll('[data-hln]').forEach(inp => inp.oninput = () => { settings.hlNames = Object.assign({}, settings.hlNames, { [inp.dataset.hln]: inp.value.trim() || HL_DEFAULT[inp.dataset.hln] }); quietSave(); render(); });
 }
 $('#bTheme').onclick = () => { renderStyleBox(); $('#stylePop').classList.add('open'); };
 $('#stylePop').addEventListener('click', e => {
