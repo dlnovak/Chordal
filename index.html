@@ -179,6 +179,7 @@ body.show .bar,body.show #panel{display:none!important}
 #fPls button{padding:7px 12px!important}
 #ocrRow{align-items:center;gap:10px}
 #fShot{background:#1f7a3a!important;color:#fff!important;font-weight:600}
+#fShorten{background:#2b3038!important}
 #ocrStatus{font-size:13px;color:#9aa0a8;flex:1;min-width:200px}
 #ocrStatus button{margin:2px 4px 2px 0;padding:7px 12px!important}
 #ocrStatus b{color:#eee}
@@ -425,7 +426,7 @@ body.light #karTopBar,body.th-sepia #karTopBar,body.light #karBar,body.th-sepia 
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v28</span>
+  <span class="lbl" title="App version">v29</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -497,7 +498,7 @@ body.light #karTopBar,body.th-sepia #karTopBar,body.light #karBar,body.th-sepia 
     </div>
     <div class="row"><input id="fChords" placeholder="Chords in this song (optional), e.g. C C7 F G G7" autocapitalize="characters" spellcheck="false"></div>
     <div class="row" id="fPls"></div>
-    <div class="row" id="ocrRow"><button type="button" id="fShot">📷 Chords from screenshots</button><input type="file" id="fShotIn" accept="image/*" multiple hidden><span id="ocrStatus">Take screenshots of the song in your tab app, then pick them here (in order).</span></div>
+    <div class="row" id="ocrRow"><button type="button" id="fShot">📷 Chords from screenshots</button><button type="button" id="fShorten" title="Turn sections that repeat word-for-word (and chord-for-chord) into just a label">✂ Shorten repeats</button><input type="file" id="fShotIn" accept="image/*" multiple hidden><span id="ocrStatus">Take screenshots of the song in your tab app, then pick them here (in order).</span></div>
     <textarea id="fText" spellcheck="false" placeholder="Paste the lyrics here, one line per line.&#10;&#10;Leave a blank line between verses.&#10;&#10;Then tap Done and click any word to put a chord over it."></textarea>
     <div class="help">
       Just paste the words. After you tap <b>Done</b>, click a word on the chart to put a chord on it, and use the blue buttons to add Chorus, Break, Repeat and so on.<br>
@@ -2621,22 +2622,92 @@ function mergeChords(myText, sheetText) {
   return { text: out.join('\n'), placed, lines };
 }
 
+/* ---- shorten repeats: a section that's an exact copy of an earlier one becomes just its label ---- */
+function lev(a, b) {
+  if (a === b) return 0;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+function collapseRepeats(text) {
+  const blocks = []; let cur = null;
+  const flush = () => { if (cur && (cur.raw || cur.body.length)) blocks.push(cur); cur = null; };
+  text.split('\n').forEach(ln => {
+    const t = ln.trim();
+    if (!t) { flush(); blocks.push({ gap: true }); return; }
+    const h = headerOf(ln);
+    if (h !== null) { flush(); cur = { label: h, raw: ln.trim(), body: [] }; return; }
+    if (!cur) cur = { label: null, raw: null, body: [] };
+    cur.body.push(ln);
+  });
+  flush();
+  // the same words AND the same chords (small screenshot-reading slips allowed)
+  const norm = body => body.map(l => l.toLowerCase().replace(/\[([^\]]+)\]/g, '<$1>').replace(/[^a-z0-9<>#\/]/g, '')).join('|');
+  const chordsOf = body => (body.join(' ').match(/\[[^\]]+\]/g) || []).join('');
+  const seen = [], latest = {}; let n = 0;
+  blocks.forEach((b, i) => b.idx = i);
+  const keyOf = b => secKey(b.label || 'Chorus');
+  // the copy Scroll/Karaoke would write back out = the most recent section with that name
+  const isLatest = s => s.b.label ? latest[keyOf(s.b)] === s.b : !(latest.chorus && latest.chorus.idx > s.b.idx);
+  blocks.forEach(b => {
+    if (b.gap) return;
+    if (b.body.length < 2) { return; }
+    const k = norm(b.body), ch = chordsOf(b.body);
+    const prev = seen.find(s => isLatest(s) && (!b.label || keyOf(b) === keyOf(s.b)) && s.ch === ch && (s.k === k || (Math.abs(s.k.length - k.length) <= 3 && lev(s.k, k) <= Math.max(2, Math.floor(k.length * 0.012)))));
+    if (!prev) { seen.push({ k, ch, b }); if (b.label) latest[keyOf(b)] = b; return; }
+    if (!prev.b.label) { prev.b.label = 'Chorus'; prev.b.raw = '[Chorus]'; prev.b.added = true; latest.chorus = prev.b; }      // an unnamed part that repeats is almost always the chorus
+    b.collapsed = true; if (!b.raw) { b.raw = '[' + prev.b.label + ']'; b.added = true; } n++;
+  });
+  // in the app, unlabeled lines belong to the section above them — so name the parts that follow a label we added,
+  // and don't shorten a section if unlabeled lines right after it would get swallowed into it
+  const real = blocks.filter(b => !b.gap);
+  let vn = blocks.filter(b => b.label && /^verse/i.test(b.label) && !b.added).length, inAdded = false;
+  const noNames = !real.some(b => b.raw && !b.added);
+  if (noNames && real.some(b => b.added)) real.forEach(b => { if (!b.raw) { b.raw = '[Verse ' + (++vn) + ']'; b.label = 'Verse ' + vn; } });   // a song with no section names at all: name every part
+  real.forEach(b => {
+    if (b.raw && !b.added) inAdded = false;
+    else if (b.added) inAdded = true;
+    else if (!b.raw && inAdded) { b.raw = '[Verse ' + (++vn) + ']'; b.label = 'Verse ' + vn; }
+  });
+  real.forEach((b, i) => { const nx = real[i + 1]; if (b.collapsed && nx && !nx.raw && !nx.collapsed) { b.collapsed = false; n--; } });
+  const out = [];
+  blocks.forEach(b => {
+    if (b.gap) { out.push(''); return; }
+    if (b.raw) out.push(b.raw);
+    if (!b.collapsed) out.push(...b.body);
+  });
+  return { text: out.join('\n').replace(/\n{3,}/g, '\n\n').trim(), n };
+}
+
 /* ---- the 📷 button in the song editor ---- */
 let ocrUndo = null;
 const ocrMsg = h => { $('#ocrStatus').innerHTML = h; };
 $('#fShot').onclick = () => $('#fShotIn').click();
+$('#fShorten').onclick = () => {
+  const before = $('#fText').value, r = collapseRepeats(before);
+  if (!r.n) { ocrMsg('No repeated sections found. A section is only shortened when its words and chords match an earlier one exactly.'); return; }
+  ocrUndo = before; $('#fText').value = r.text;
+  ocrMsg(`Shortened <b>${r.n} repeated section${r.n > 1 ? 's' : ''}</b> to just a label. Scroll and Karaoke still write them out while you play. <button type="button" data-ocr="undo">↶ Undo</button>`);
+};
 $('#fShotIn').onchange = async e => {
   const files = [...e.target.files].sort((a, b) => (a.lastModified - b.lastModified) || a.name.localeCompare(b.name));
   e.target.value = '';
   if (!files.length) return;
   $('#fShot').disabled = true;
   try {
-    const sheet = ocrToText(await ocrImages(files, s => ocrMsg(s)));
+    const full = ocrToText(await ocrImages(files, s => ocrMsg(s))), short = collapseRepeats(full);
+    OCR.full = full; OCR.short = short;
+    const sheet = short.text;
+    const shortNote = short.n ? ` I shortened <b>${short.n} repeated section${short.n > 1 ? 's' : ''}</b> to just a label. <button type="button" data-ocr="full">Write them out instead</button>` : '';
     if (!/\[[^\]]+\]/.test(sheet)) { ocrMsg('I couldn’t find any chords in those screenshots. Try zooming in, or crop to just the song.'); return; }
     const cur = $('#fText').value, hasWords = cur.trim().length > 0, nCh = (sheet.match(/\[[^\]]+\]/g) || []).length;
     ocrUndo = cur;
-    if (!hasWords) { $('#fText').value = sheet; ocrMsg(`Found <b>${nCh} chords</b>. Check the words below (screenshots sometimes catch extra bits like the app’s title), then tap <b>Done</b>. <button type="button" data-ocr="undo">↶ Undo</button>`); return; }
-    OCR.sheet = sheet;
+    if (!hasWords) { $('#fText').value = sheet; ocrMsg(`Found <b>${nCh} chords</b>.${shortNote} Check the words below (screenshots sometimes catch extra bits like the app’s title), then tap <b>Done</b>. <button type="button" data-ocr="undo">↶ Undo</button>`); return; }
+    OCR.sheet = sheet; OCR.shortNote = shortNote;
     ocrMsg(`Found <b>${nCh} chords</b>. What should I do with them? <br><button type="button" data-ocr="merge">Add the chords to my lyrics</button><button type="button" data-ocr="replace">Replace with the screenshot’s words &amp; chords</button><button type="button" data-ocr="cancel">Cancel</button>`);
   } catch (err) { ocrMsg('Couldn’t read the screenshots: ' + esc(err.message || String(err))); }
   finally { $('#fShot').disabled = false; }
@@ -2646,9 +2717,11 @@ $('#ocrStatus').addEventListener('click', e => {
   const a = b.dataset.ocr;
   if (a === 'undo') { if (ocrUndo != null) $('#fText').value = ocrUndo; ocrUndo = null; ocrMsg('Put back the way it was.'); return; }
   if (a === 'cancel') { ocrMsg('Nothing changed.'); return; }
-  if (a === 'replace') { $('#fText').value = OCR.sheet; ocrMsg('Replaced. Check it over, then tap <b>Done</b>. <button type="button" data-ocr="undo">↶ Undo</button>'); return; }
+  if (a === 'replace') { $('#fText').value = OCR.sheet; ocrMsg('Replaced.' + (OCR.shortNote || '') + ' Check it over, then tap <b>Done</b>. <button type="button" data-ocr="undo">↶ Undo</button>'); return; }
+  if (a === 'full') { $('#fText').value = OCR.full; ocrMsg('Written out in full. <button type="button" data-ocr="short">Shorten repeats again</button> <button type="button" data-ocr="undo">↶ Undo</button>'); return; }
+  if (a === 'short') { $('#fText').value = OCR.short.text; ocrMsg('Repeats shortened to labels. <button type="button" data-ocr="full">Write them out instead</button> <button type="button" data-ocr="undo">↶ Undo</button>'); return; }
   if (a === 'merge') {
-    const r = mergeChords($('#fText').value, OCR.sheet);
+    const r = mergeChords($('#fText').value, OCR.full);
     $('#fText').value = r.text;
     ocrMsg(r.placed ? `Added <b>${r.placed} chords</b> to your lyrics. Lines that didn’t match the screenshot were left alone — check it over, then tap <b>Done</b>. <button type="button" data-ocr="undo">↶ Undo</button>`
       : 'None of your lines matched the screenshot’s words, so nothing was added. You can use “Replace” instead. <button type="button" data-ocr="undo">↶ Undo</button>');
