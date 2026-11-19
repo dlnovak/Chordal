@@ -177,6 +177,11 @@ body.show .bar,body.show #panel{display:none!important}
 #fPls label.on{border-color:#2f6fed;background:#16233b;color:#fff}
 #fPls input{width:16px;height:16px;flex:none;min-width:0;margin:0}
 #fPls button{padding:7px 12px!important}
+#ocrRow{align-items:center;gap:10px}
+#fShot{background:#1f7a3a!important;color:#fff!important;font-weight:600}
+#ocrStatus{font-size:13px;color:#9aa0a8;flex:1;min-width:200px}
+#ocrStatus button{margin:2px 4px 2px 0;padding:7px 12px!important}
+#ocrStatus b{color:#eee}
 #edBox .help{font-size:12.5px;color:#9aa0a8;line-height:1.45}
 #edBox button{background:#2b3038;color:#eee;border:0;border-radius:8px;padding:9px 16px;cursor:pointer}
 #edBox button.pri{background:#2f6fed}
@@ -420,7 +425,7 @@ body.light #karTopBar,body.th-sepia #karTopBar,body.light #karBar,body.th-sepia 
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v27</span>
+  <span class="lbl" title="App version">v28</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -492,6 +497,7 @@ body.light #karTopBar,body.th-sepia #karTopBar,body.light #karBar,body.th-sepia 
     </div>
     <div class="row"><input id="fChords" placeholder="Chords in this song (optional), e.g. C C7 F G G7" autocapitalize="characters" spellcheck="false"></div>
     <div class="row" id="fPls"></div>
+    <div class="row" id="ocrRow"><button type="button" id="fShot">📷 Chords from screenshots</button><input type="file" id="fShotIn" accept="image/*" multiple hidden><span id="ocrStatus">Take screenshots of the song in your tab app, then pick them here (in order).</span></div>
     <textarea id="fText" spellcheck="false" placeholder="Paste the lyrics here, one line per line.&#10;&#10;Leave a blank line between verses.&#10;&#10;Then tap Done and click any word to put a chord over it."></textarea>
     <div class="help">
       Just paste the words. After you tap <b>Done</b>, click a word on the chart to put a chord on it, and use the blue buttons to add Chorus, Break, Repeat and so on.<br>
@@ -1817,6 +1823,7 @@ function openEditor(isNew) {
   const s = isNew ? norm({}) : song();
   $('#fTitle').value = s.title; $('#fArtist').value = s.artist; $('#fKey').value = s.key; $('#fText').value = linesToText(s.lines);
   $('#fChords').value = (s.palette || []).join(' ');
+  ocrMsg('Take screenshots of the song in your tab app, then pick them here (in order).'); ocrUndo = null;
   const ap = activePl();
   plChecks = new Set(isNew ? (ap ? [ap.id] : []) : playlists.filter(p => p.ids.includes(s.id)).map(p => p.id));
   renderPlChecks();
@@ -2446,6 +2453,207 @@ document.addEventListener('keydown', e => {
   if (done) { e.preventDefault(); e.stopImmediatePropagation(); }
 }, true);
 window.addEventListener('resize', () => { if (K.open && !K.playing) kBuild(); });
+
+/* ---- read chord sheets from screenshots (runs on the device with Tesseract.js) ---- */
+const OCR = { worker: null, base: 'https://cdn.jsdelivr.net/npm/' };
+window.StageOCR = OCR;
+function ocrLoadLib() {
+  if (window.Tesseract) return Promise.resolve();
+  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = OCR.lib || OCR.base + 'tesseract.js@5/dist/tesseract.min.js'; s.onload = res; s.onerror = () => rej(new Error('Could not load the screenshot reader (are you online?)')); document.head.appendChild(s); });
+}
+async function ocrWorker(onLog) {
+  if (OCR.worker) return OCR.worker;
+  await ocrLoadLib();
+  const opts = { logger: m => onLog && onLog(m) };
+  if (OCR.paths) Object.assign(opts, OCR.paths);
+  OCR.worker = await Tesseract.createWorker('eng', 1, opts);
+  await OCR.worker.setParameters({ tessedit_pageseg_mode: '6', preserve_interword_spaces: '1' });
+  return OCR.worker;
+}
+function ocrPrep(img) {            // grayscale, dark mode → light, enlarge small images
+  const sc = img.width < 900 ? 2 : 1, c = document.createElement('canvas');
+  c.width = img.width * sc; c.height = img.height * sc;
+  const x = c.getContext('2d'); x.drawImage(img, 0, 0, c.width, c.height);
+  const d = x.getImageData(0, 0, c.width, c.height), p = d.data;
+  let sum = 0; for (let i = 0; i < p.length; i += 16) sum += 0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2];
+  const dark = sum / (p.length / 16) < 128;
+  for (let i = 0; i < p.length; i += 4) {
+    const mx = Math.max(p[i], p[i + 1], p[i + 2]), mn = Math.min(p[i], p[i + 1], p[i + 2]);
+    let v = dark ? 255 - mx : 0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2];
+    if (!dark && mx - mn > 60) v *= 0.6;      // colored chord text on a light page → darker
+    v = v < 160 ? Math.max(0, v - 40) : 255;      // flatten backgrounds (chord chips, cards)
+    p[i] = p[i + 1] = p[i + 2] = v;
+  }
+  x.putImageData(d, 0, 0);
+  return c;
+}
+const fileToImg = f => new Promise((res, rej) => { const u = URL.createObjectURL(f), im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = u; });
+// OCR mix-ups in chord names
+function fixChordTok(w) {
+  let t = w.replace(/[|'"“”‘’`.,;:!_~]+$/g, '').replace(/^[|'"“”‘’`(]+/, '');
+  if (isChord(t)) return t;
+  if (/^[A-G][a-ln-z]$/.test(t)) return t[0];               // "Cc", "Gs" → the letter
+  const m = t.replace(/^6/, 'G').replace(/^0(?=$|[m#b7])/, 'D').replace(/^8(?=$|[m#b7])/, 'B').replace(/^[cg](?=$|[m#b7])/, s => s.toUpperCase()).replace(/^G\]/, 'G7').replace(/(?<=[A-G])l$/, '7').replace(/(?<=[A-G]m?)\/$/, '7');
+  return isChord(m) ? m : null;
+}
+async function ocrImages(files, onStatus) {
+  const w = await ocrWorker(m => { if (m.status && /loading|initializ/.test(m.status)) onStatus('Getting the screenshot reader ready… ' + Math.round((m.progress || 0) * 100) + '%'); });
+  const pages = [];
+  for (let n = 0; n < files.length; n++) {
+    onStatus(`Reading screenshot ${n + 1} of ${files.length}…`);
+    const img = files[n] instanceof HTMLCanvasElement || files[n] instanceof HTMLImageElement ? files[n] : await fileToImg(files[n]);
+    const { data } = await w.recognize(ocrPrep(img), {}, { blocks: true });
+    const lines = [];
+    (data.blocks || []).forEach(b => b.paragraphs.forEach(pa => pa.lines.forEach(l => {
+      const words = l.words.filter(x => x.text.trim()).map(x => ({ t: x.text.trim(), x0: x.bbox.x0, x1: x.bbox.x1, conf: x.confidence }));
+      if (words.length) lines.push({ y0: l.bbox.y0, y1: l.bbox.y1, words });
+    })));
+    lines.sort((a, b) => a.y0 - b.y0);
+    pages.push(lines);
+  }
+  return pages;
+}
+// turn OCR lines into song text with [inline] chords
+function ocrToText(pages) {
+  const out = [];
+  pages.forEach((lines, pi) => {
+    const heights = lines.map(l => l.y1 - l.y0).sort((a, b) => a - b), lh = heights[Math.floor(heights.length / 2)] || 30;
+    const items = lines.map(l => {
+      const toks = l.words.map(w => fixChordTok(w.t));
+      const n = l.words.length, chordy = toks.filter(Boolean).length, isCh = chordy > 0 && (n <= 2 ? chordy === n : chordy / n >= 0.6);
+      if (!isCh) l.words.forEach(w => { w.t = w.t.replace(/^\|(?=$|')/, 'I'); });
+      return Object.assign(l, { isCh, chords: isCh ? l.words.map((w, i) => ({ c: toks[i], x: w.x0 })).filter(c => c.c) : null, text: l.words.map(w => w.t).join(' ') });
+    });
+    const page = [];
+    for (let i = 0; i < items.length; i++) {
+      const L = items[i], prev = items[i - 1];
+      if (prev && L.y0 - prev.y1 > lh * 1.25 && !(prev.isCh && !L.isCh)) page.push('');     // paragraph break
+      if (L.isCh) {
+        const nx = items[i + 1];
+        if (nx && !nx.isCh && nx.y0 - L.y1 < lh * 1.2 && !headerOf(nx.text)) { page.push(placeChords(L.chords, nx.words)); i++; }
+        else page.push(L.chords.map(c => '[' + c.c + ']').join(' '));
+      } else page.push(L.text);
+    }
+    // drop lines repeated from the bottom of the previous screenshot (overlap when scrolling)
+    if (pi && out.length) {
+      const norm = s => s.toLowerCase().replace(/\[[^\]]*\]/g, '').replace(/[^a-z0-9]/g, '');
+      let k = Math.min(10, page.length);
+      for (; k > 0; k--) { const tail = out.slice(-k).map(norm).join('|'), head = page.slice(0, k).map(norm).join('|'); if (tail === head && head.replace(/\|/g, '')) break; }
+      page.splice(0, k);
+      if (out[out.length - 1] !== '' && page[0] !== '') out.push('');
+    }
+    out.push(...page);
+  });
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+function placeChords(chords, words) {
+  // put each chord in front of the word (or letter) it sits above, using the screen positions
+  const ins = [];    // {wi, ci, c}
+  // average letter width on this lyric line (works for typewriter and normal fonts)
+  const cw = words.reduce((a, w) => a + (w.x1 - w.x0), 0) / Math.max(1, words.reduce((a, w) => a + w.t.length, 0));
+  chords.forEach(ch => {
+    let wi = words.findIndex(w => ch.x < w.x1 - 2);
+    if (wi < 0) { ins.push({ wi: words.length, ci: 0, c: ch.c }); return; }
+    const w = words[wi];
+    let ci = 0;
+    if (ch.x > w.x0 + cw * 0.5) ci = Math.max(0, Math.min(w.t.length - 1, Math.round((ch.x - w.x0) / cw)));
+    ins.push({ wi, ci, c: ch.c });
+  });
+  let s = '';
+  words.forEach((w, wi) => {
+    let t = w.t;
+    ins.filter(x => x.wi === wi).sort((a, b) => b.ci - a.ci).forEach(x => { t = t.slice(0, x.ci) + '[' + x.c + ']' + t.slice(x.ci); });
+    s += (wi ? ' ' : '') + t;
+  });
+  ins.filter(x => x.wi === words.length).forEach(x => { s += ' [' + x.c + ']'; });
+  return s;
+}
+/* ---- put the chords from a chord sheet onto lyrics you already have ---- */
+const normW = w => w.toLowerCase().replace(/[^a-z0-9']/g, '').replace(/'/g, '');
+function splitInline(line) {          // "[G]Walk[C]ing on" → words with chords at letter positions
+  let plain = '', marks = [];
+  line.replace(/\[([^\]]+)\]|([^\[]+)/g, (m, c, txt) => { if (c) marks.push({ pos: plain.length, c: c.trim() }); else plain += txt; return m; });
+  const words = [], re = /\S+/g; let m;
+  while ((m = re.exec(plain))) words.push({ t: m[0], s: m.index, e: m.index + m[0].length, ch: [] });
+  const tail = [];
+  marks.forEach(k => {
+    const w = words.find(w => k.pos < w.e) ;
+    if (!w) tail.push(k.c); else w.ch.push({ ci: Math.max(0, k.pos - w.s), c: k.c });
+  });
+  return { words, tail, plain: plain.trim() };
+}
+function lcsMap(a, b) {               // word alignment: index in b → index in a
+  const n = a.length, m = b.length, d = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) d[i][j] = a[i] && a[i] === b[j] ? d[i + 1][j + 1] + 1 : Math.max(d[i + 1][j], d[i][j + 1]);
+  const map = {}; let i = 0, j = 0;
+  while (i < n && j < m) { if (a[i] && a[i] === b[j]) { map[j] = i; i++; j++; } else if (d[i + 1][j] >= d[i][j + 1]) i++; else j++; }
+  return { map, score: d[0][0] };
+}
+function mergeChords(myText, sheetText) {
+  const sheet = sheetText.split('\n').map(l => l.trim()).filter(l => l && /\[[^\]]+\]/.test(l)).map(splitInline).filter(x => x.words.length);
+  let cursor = 0, placed = 0, lines = 0;
+  const out = myText.split('\n').map(line => {
+    const t = line.trim();
+    if (!t || /\[[^\]]+\]/.test(t) || headerOf(line) !== null || isChordLine(line)) return line;
+    lines++;
+    const mine = t.split(/\s+/), mineN = mine.map(normW);
+    let best = null;
+    const order = [...sheet.keys()].slice(cursor).concat([...sheet.keys()].slice(0, cursor));    // look ahead first, then wrap (repeated choruses)
+    for (const k of order) {
+      const r = lcsMap(mineN, sheet[k].words.map(w => normW(w.t)));
+      const q = r.score / Math.max(mine.length, sheet[k].words.length);
+      if (q >= 0.6 && (!best || q > best.q + 0.05)) { best = { k, q, map: r.map }; if (q > 0.95) break; }
+    }
+    if (!best) return line;
+    cursor = best.k + 1;
+    const S = sheet[best.k], add = mine.map(() => []);
+    S.words.forEach((w, j) => {
+      if (!w.ch.length) return;
+      let i = best.map[j];
+      if (i == null) { for (let jj = j + 1; jj < S.words.length; jj++) if (best.map[jj] != null) { i = best.map[jj]; break; } }   // unmatched word → next matched one
+      if (i == null) { S.tail.unshift(...w.ch.map(x => x.c)); return; }
+      w.ch.forEach(x => add[i].push({ ci: best.map[j] == null ? 0 : Math.min(x.ci, mine[i].length - 1), c: x.c }));
+    });
+    let s = mine.map((w, i) => { let t = w; add[i].sort((a, b) => b.ci - a.ci).forEach(x => { t = t.slice(0, x.ci) + '[' + x.c + ']' + t.slice(x.ci); placed++; }); return t; }).join(' ');
+    if (S.tail.length) { s += ' ' + S.tail.map(c => '[' + c + ']').join(' '); placed += S.tail.length; }
+    return line.match(/^\s*/)[0] + s;
+  });
+  return { text: out.join('\n'), placed, lines };
+}
+
+/* ---- the 📷 button in the song editor ---- */
+let ocrUndo = null;
+const ocrMsg = h => { $('#ocrStatus').innerHTML = h; };
+$('#fShot').onclick = () => $('#fShotIn').click();
+$('#fShotIn').onchange = async e => {
+  const files = [...e.target.files].sort((a, b) => (a.lastModified - b.lastModified) || a.name.localeCompare(b.name));
+  e.target.value = '';
+  if (!files.length) return;
+  $('#fShot').disabled = true;
+  try {
+    const sheet = ocrToText(await ocrImages(files, s => ocrMsg(s)));
+    if (!/\[[^\]]+\]/.test(sheet)) { ocrMsg('I couldn’t find any chords in those screenshots. Try zooming in, or crop to just the song.'); return; }
+    const cur = $('#fText').value, hasWords = cur.trim().length > 0, nCh = (sheet.match(/\[[^\]]+\]/g) || []).length;
+    ocrUndo = cur;
+    if (!hasWords) { $('#fText').value = sheet; ocrMsg(`Found <b>${nCh} chords</b>. Check the words below (screenshots sometimes catch extra bits like the app’s title), then tap <b>Done</b>. <button type="button" data-ocr="undo">↶ Undo</button>`); return; }
+    OCR.sheet = sheet;
+    ocrMsg(`Found <b>${nCh} chords</b>. What should I do with them? <br><button type="button" data-ocr="merge">Add the chords to my lyrics</button><button type="button" data-ocr="replace">Replace with the screenshot’s words &amp; chords</button><button type="button" data-ocr="cancel">Cancel</button>`);
+  } catch (err) { ocrMsg('Couldn’t read the screenshots: ' + esc(err.message || String(err))); }
+  finally { $('#fShot').disabled = false; }
+};
+$('#ocrStatus').addEventListener('click', e => {
+  const b = e.target.closest('[data-ocr]'); if (!b) return;
+  const a = b.dataset.ocr;
+  if (a === 'undo') { if (ocrUndo != null) $('#fText').value = ocrUndo; ocrUndo = null; ocrMsg('Put back the way it was.'); return; }
+  if (a === 'cancel') { ocrMsg('Nothing changed.'); return; }
+  if (a === 'replace') { $('#fText').value = OCR.sheet; ocrMsg('Replaced. Check it over, then tap <b>Done</b>. <button type="button" data-ocr="undo">↶ Undo</button>'); return; }
+  if (a === 'merge') {
+    const r = mergeChords($('#fText').value, OCR.sheet);
+    $('#fText').value = r.text;
+    ocrMsg(r.placed ? `Added <b>${r.placed} chords</b> to your lyrics. Lines that didn’t match the screenshot were left alone — check it over, then tap <b>Done</b>. <button type="button" data-ocr="undo">↶ Undo</button>`
+      : 'None of your lines matched the screenshot’s words, so nothing was added. You can use “Replace” instead. <button type="button" data-ocr="undo">↶ Undo</button>');
+  }
+});
 
 /* ================= toolbar ================= */
 $('#bPrev').onclick = () => nav(-1);
