@@ -428,7 +428,7 @@ body.light #karTopBar,body.th-sepia #karTopBar,body.light #karBar,body.th-sepia 
   <button id="bImport" title="Load a songs.json backup">⬆ Restore</button>
   <input type="file" id="fileIn" accept=".json,application/json" hidden>
   <span class="sep"></span>
-  <span class="lbl" title="App version">v30</span>
+  <span class="lbl" title="App version">v31</span>
   <span class="sep cloudOnly"></span>
   <button id="bCloud" class="cloudOnly">☁ Sign in</button>
   <button id="bLive" class="cloudOnly" title="Make every screen jump to the song you pick">📡 Follow: off</button>
@@ -1451,8 +1451,12 @@ const secKey = t => String(t).toLowerCase().replace(/\(.*?\)/g, ' ').replace(/\b
   .replace(/[x×]\s*\d+|\d+\s*x\b/g, ' ').replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ').trim();
 const repCount = t => { const m = String(t).match(/[x×]\s*(\d+)|(\d+)\s*x\b/i); return m ? Math.max(1, Math.min(4, +(m[1] || m[2]))) : /twice/i.test(t) ? 2 : 1; };
 function expandRepeats(s) {
-  const L = s.lines, out = [], bodies = {};
+  const L = s.lines, out = [], bodies = {}, markers = new Set();
+  // "Chorus x2" + blank line + other lines (an ending, a tag): if that section already appeared, the label is
+  // just a repeat marker and the lines after the blank are their own little block, not this section's words
+  const isRepeatMarker = i => { if (L[i + 1] && L[i + 1].k !== 'gap') return false; const key = secKey(L[i].t); return !!(key && (bodies[key] || bodies[key.replace(/\s*\d+$/, '')])); };
   for (let i = 0; i < L.length; i++) if (L[i].k === 'label') {
+    if (isRepeatMarker(i)) { markers.add(i); continue; }
     const body = []; let j = i + 1;
     while (j < L.length && L[j].k !== 'label') { body.push({ L: L[j], l: j }); j++; }
     while (body.length && body[body.length - 1].L.k === 'gap') body.pop();
@@ -1462,7 +1466,7 @@ function expandRepeats(s) {
     out.push({ L: L[i], l: i });
     if (L[i].k !== 'label') continue;
     let j = i + 1; while (j < L.length && L[j].k === 'gap') j++;
-    if (j < L.length && L[j].k !== 'label') continue;              // it already has its own lines
+    if (j < L.length && L[j].k !== 'label' && !markers.has(i)) continue;              // it already has its own lines
     const key = secKey(L[i].t), cands = bodies[key] || bodies[key.replace(/\s*\d+$/, '')];
     if (!key || !cands) continue;
     const src = [...cands].reverse().find(c => c.at < i) || cands[0];
